@@ -1764,7 +1764,7 @@ namespace ROcheck
                              ?? GetPropertyValue(goal, "ObjectiveValue");
 
             if (doseObject is DoseValue doseValue)
-                return doseValue.Dose;
+                return NormalizeDoseValueGy(doseValue);
 
             if (doseObject is double doubleDose)
                 return doubleDose;
@@ -1776,11 +1776,41 @@ namespace ROcheck
             if (property != null)
             {
                 var innerDose = property.GetValue(doseObject);
+                if (innerDose is DoseValue innerDoseValue)
+                    return NormalizeDoseValueGy(innerDoseValue);
+
                 if (innerDose is double innerDouble)
                     return innerDouble;
+
+                if (innerDose is float innerFloat)
+                    return innerFloat;
             }
 
             return null;
+        }
+
+        private static double? NormalizeDoseValueGy(DoseValue doseValue)
+        {
+            var unitText = doseValue.Unit.ToString();
+
+            if (unitText.Equals("Gy", StringComparison.OrdinalIgnoreCase))
+                return doseValue.Dose;
+
+            if (unitText.Equals("cGy", StringComparison.OrdinalIgnoreCase))
+                return doseValue.Dose / 100.0;
+
+            if (unitText.IndexOf("Percent", StringComparison.OrdinalIgnoreCase) >= 0)
+                return null;
+
+            var presentationProperty = typeof(DoseValue).GetProperty("Presentation");
+            if (presentationProperty != null)
+            {
+                var presentationValue = presentationProperty.GetValue(doseValue)?.ToString();
+                if (presentationValue?.IndexOf("Relative", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return null;
+            }
+
+            return doseValue.Dose;
         }
 
         private static object GetPropertyValue(object obj, string propertyName)

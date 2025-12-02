@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using VMS.TPS.Common.Model.API;
 using VMS.TPS.Common.Model.Types;
 
-namespace PlanCrossCheck
+namespace ROcheck
 {
     public enum ValidationSeverity
     {

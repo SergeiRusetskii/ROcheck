@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using VMS.TPS.Common.Model.API;
@@ -497,8 +498,70 @@ namespace ROcheck
 
         private static IEnumerable<object> GetClinicalGoals(PlanSetup plan)
         {
-            var property = plan?.GetType().GetProperty("ClinicalGoals");
-            if (property?.GetValue(plan) is System.Collections.IEnumerable enumerable)
+            if (plan == null)
+                yield break;
+
+            var seen = new HashSet<object>();
+
+            foreach (var goal in GetClinicalGoalsFromProperty(plan))
+            {
+                if (seen.Add(goal))
+                    yield return goal;
+            }
+
+            foreach (var goal in GetClinicalGoalsFromMethod(plan, "GetClinicalGoals"))
+            {
+                if (seen.Add(goal))
+                    yield return goal;
+            }
+
+            foreach (var goal in GetClinicalGoalsFromMethod(plan, "GetPlanningGoals"))
+            {
+                if (seen.Add(goal))
+                    yield return goal;
+            }
+
+            foreach (var goal in GetClinicalGoalsFromMethod(plan, "GetGoals"))
+            {
+                if (seen.Add(goal))
+                    yield return goal;
+            }
+
+            foreach (var goal in GetClinicalGoalsFromCourse(plan))
+            {
+                if (seen.Add(goal))
+                    yield return goal;
+            }
+        }
+
+        private static IEnumerable<object> GetClinicalGoalsFromProperty(PlanSetup plan)
+        {
+            var property = plan.GetType().GetProperty("ClinicalGoals");
+            if (property?.GetValue(plan) is IEnumerable enumerable)
+            {
+                foreach (var goal in enumerable)
+                    yield return goal;
+            }
+        }
+
+        private static IEnumerable<object> GetClinicalGoalsFromMethod(PlanSetup plan, string methodName)
+        {
+            var method = plan.GetType().GetMethod(methodName, Type.EmptyTypes);
+            if (method?.Invoke(plan, null) is IEnumerable enumerable)
+            {
+                foreach (var goal in enumerable)
+                    yield return goal;
+            }
+        }
+
+        private static IEnumerable<object> GetClinicalGoalsFromCourse(PlanSetup plan)
+        {
+            var course = plan.Course;
+            if (course == null)
+                yield break;
+
+            var property = course.GetType().GetProperty("ClinicalGoals");
+            if (property?.GetValue(course) is IEnumerable enumerable)
             {
                 foreach (var goal in enumerable)
                     yield return goal;

@@ -66,7 +66,7 @@ namespace ROcheck
     {
         private static readonly HashSet<string> ExcludedStructures = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "Bones", "CouchInterior", "CouchSurface"
+            "Bones", "CouchInterior", "CouchSurface", "Clips", "Scar_Wire"
         };
 
         public override IEnumerable<ValidationResult> Validate(ScriptContext context)
@@ -80,37 +80,6 @@ namespace ROcheck
                 return results;
 
             var clinicalGoals = GetClinicalGoals(plan).ToList();
-
-            // DEBUG: Show first 3 clinical goal properties
-            for (int i = 0; i < Math.Min(3, clinicalGoals.Count); i++)
-            {
-                var goal = clinicalGoals[i];
-                results.Add(CreateResult(
-                    "DEBUG - Clinical Goals",
-                    $"=== Clinical Goal #{i + 1} Properties ===",
-                    ValidationSeverity.Info));
-
-                var goalType = goal.GetType();
-                foreach (var prop in goalType.GetProperties())
-                {
-                    try
-                    {
-                        var value = prop.GetValue(goal);
-                        results.Add(CreateResult(
-                            "DEBUG - Clinical Goals",
-                            $"  {prop.Name}: {value ?? "<null>"}",
-                            ValidationSeverity.Info));
-                    }
-                    catch
-                    {
-                        results.Add(CreateResult(
-                            "DEBUG - Clinical Goals",
-                            $"  {prop.Name}: <error reading>",
-                            ValidationSeverity.Info));
-                    }
-                }
-            }
-
             var structureGoals = BuildStructureGoalLookup(clinicalGoals);
 
             ValidateClinicalGoalPresence(structureSet.Structures, structureGoals, results);
@@ -128,20 +97,6 @@ namespace ROcheck
         {
             int initialCount = results.Count;
             int checkedCount = 0;
-
-            // DEBUG: Display all clinical goal structure IDs in the window
-            results.Add(CreateResult(
-                "DEBUG - Clinical Goals",
-                $"Total clinical goals found: {structureGoals.Count}",
-                ValidationSeverity.Info));
-
-            foreach (var kvp in structureGoals)
-            {
-                results.Add(CreateResult(
-                    "DEBUG - Clinical Goals",
-                    $"CG Structure ID: '{kvp.Key}' ({kvp.Value.Count} goals)",
-                    ValidationSeverity.Info));
-            }
 
             foreach (var structure in structures)
             {
@@ -693,7 +648,8 @@ namespace ROcheck
             if (structure.Id.StartsWith("z_", StringComparison.OrdinalIgnoreCase) ||
                 structure.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase) ||
                 structure.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase) ||
-                structure.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase))
+                structure.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase) ||
+                structure.Id.IndexOf("wire", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return true;
             }

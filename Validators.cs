@@ -69,6 +69,11 @@ namespace ROcheck
             "Bones", "CouchInterior", "CouchSurface", "Clips", "Scar_Wire"
         };
 
+        /// <summary>
+        /// Main validation entry point. Orchestrates all clinical goal and structure validation checks.
+        /// </summary>
+        /// <param name="context">The Eclipse script context containing plan and structure set information</param>
+        /// <returns>Collection of validation results with category, message, and severity</returns>
         public override IEnumerable<ValidationResult> Validate(ScriptContext context)
         {
             var results = new List<ValidationResult>();
@@ -76,24 +81,37 @@ namespace ROcheck
             var plan = context.PlanSetup;
             var structureSet = context.StructureSet;
 
+            // Ensure we have both a plan and structure set to validate
             if (plan == null || structureSet == null)
                 return results;
 
+            // Retrieve clinical goals using multiple access methods for compatibility across ESAPI versions
             var clinicalGoals = GetClinicalGoals(plan).ToList();
+
+            // Build a lookup dictionary mapping structure IDs to their associated clinical goals
             var structureGoals = BuildStructureGoalLookup(clinicalGoals);
 
-            // Get prescription target IDs
+            // Extract target structure IDs from prescription for smart target filtering
             var prescriptionTargetIds = GetPrescriptionTargetIds(plan);
 
+            // Execute all validation checks
             ValidateClinicalGoalPresence(structureSet.Structures, structureGoals, prescriptionTargetIds, results);
             ValidateTargetContainment(structureSet.Structures, structureSet.Image, results);
-            ValidatePtvsOverlappingOars(structureSet.Structures, structureSet.Image, structureGoals, results);
+            ValidateTargetsOverlappingOars(structureSet.Structures, structureSet.Image, structureGoals, results);
             ValidateSmallVolumeResolution(structureSet.Structures, results);
             ValidateTargetStructureTypes(structureSet.Structures, results);
 
             return results;
         }
 
+        /// <summary>
+        /// Validates that all applicable structures have at least one associated clinical goal.
+        /// Uses prescription-aware filtering to only check active treatment targets.
+        /// </summary>
+        /// <param name="structures">Collection of structures in the structure set</param>
+        /// <param name="structureGoals">Dictionary mapping structure IDs to their clinical goals</param>
+        /// <param name="prescriptionTargetIds">Set of target IDs from the prescription</param>
+        /// <param name="results">List to append validation results to</param>
         private static void ValidateClinicalGoalPresence(IEnumerable<Structure> structures,
             Dictionary<string, List<object>> structureGoals,
             HashSet<string> prescriptionTargetIds,
@@ -104,11 +122,13 @@ namespace ROcheck
 
             foreach (var structure in structures)
             {
+                // Skip structures based on exclusion logic (support structures, non-prescription targets, etc.)
                 if (IsStructureExcluded(structure, prescriptionTargetIds))
                     continue;
 
                 checkedCount++;
 
+                // Warn if a structure that should have goals doesn't have any
                 if (!structureGoals.ContainsKey(structure.Id))
                 {
                     results.Add(CreateResult(
@@ -118,7 +138,7 @@ namespace ROcheck
                 }
             }
 
-            // Add summary if all checked structures passed
+            // Add informational summary if all checked structures passed validation
             if (results.Count == initialCount && checkedCount > 0)
             {
                 results.Add(CreateResult(
@@ -135,6 +155,14 @@ namespace ROcheck
             }
         }
 
+        /// <summary>
+        /// Validates that GTV and CTV volumes are fully contained within their corresponding PTV volumes.
+        /// Matches structures by suffix (e.g., PTV_59.4 should contain CTV_59.4 and GTV_59.4).
+        /// Uses voxel-based spatial overlap detection.
+        /// </summary>
+        /// <param name="structures">Collection of structures to validate</param>
+        /// <param name="image">Image context for spatial calculations</param>
+        /// <param name="results">List to append validation results to</param>
         private static void ValidateTargetContainment(IEnumerable<Structure> structures, Image image, List<ValidationResult> results)
         {
             var structureList = structures.ToList();
@@ -147,12 +175,16 @@ namespace ROcheck
             int initialCount = results.Count;
             int checkedPairs = 0;
 
+            // For each PTV, check if corresponding CTV and GTV are fully contained
             foreach (var ptv in structureList.Where(s => s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase)))
             {
+                // Extract suffix from PTV name (e.g., "59.4" from "PTV_59.4")
                 string suffix = GetTargetSuffix(ptv.Id, "PTV");
 
+                // Check both CTV and GTV for this PTV
                 foreach (var prefix in new[] { "CTV", "GTV" })
                 {
+                    // Find matching target by prefix and suffix
                     var target = structureList.FirstOrDefault(s =>
                         s.Id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
                         string.Equals(GetTargetSuffix(s.Id, prefix), suffix, StringComparison.OrdinalIgnoreCase));
@@ -160,6 +192,7 @@ namespace ROcheck
                     if (target != null)
                     {
                         checkedPairs++;
+                        // Verify target is fully contained within PTV
                         if (!IsStructureContained(target, ptv, image))
                         {
                             results.Add(CreateResult(
@@ -181,7 +214,12 @@ namespace ROcheck
             }
         }
 
-        private static void ValidatePtvsOverlappingOars(IEnumerable<Structure> structures,
+        /// <summary>
+        /// Validates that target volumes (GTV/CTV/PTV) with lower dose goals don't overlap with OARs
+        /// that have Dmax objectives below the target's lower goal dose. This identifies potential
+        /// dose conflicts where an OAR maximum dose constraint is lower than the minimum target dose.
+        /// </summary>
+        private static void ValidateTargetsOverlappingOars(IEnumerable<Structure> structures,
             Image image,
             Dictionary<string, List<object>> structureGoals,
             List<ValidationResult> results)
@@ -194,63 +232,81 @@ namespace ROcheck
                 return;
 
             int initialCount = results.Count;
-            int checkedPtvs = 0;
+            int checkedTargets = 0;
 
-            foreach (var ptv in structureList.Where(s => s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase)))
+            // Check all target volumes (GTV, CTV, PTV) for overlaps with OARs
+            foreach (var target in structureList.Where(s =>
+                s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase) ||
+                s.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase) ||
+                s.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase)))
             {
-                if (!structureGoals.TryGetValue(ptv.Id, out var ptvGoals))
+                // Skip if this target doesn't have clinical goals
+                if (!structureGoals.TryGetValue(target.Id, out var targetGoals))
                     continue;
 
-                var lowerGoalDose = ptvGoals
+                // Find the lower dose goal (minimum dose constraint) for this target
+                var lowerGoalDose = targetGoals
                     .Where(IsLowerGoal)
                     .Select(GetGoalDoseGy)
                     .FirstOrDefault(d => d.HasValue);
 
+                // Skip if no lower goal found
                 if (!lowerGoalDose.HasValue)
                     continue;
 
-                checkedPtvs++;
+                checkedTargets++;
 
+                // Find all non-target structures (potential OARs) that overlap with this target
                 var overlappingOars = structureList
                     .Where(s => !s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase)
                                 && !s.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase)
                                 && !s.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase)
                                 && structureGoals.ContainsKey(s.Id)
-                                && StructuresOverlap(ptv, s, image));
+                                && StructuresOverlap(target, s, image));
 
+                // Check each overlapping OAR for conflicting dose constraints
                 foreach (var oar in overlappingOars)
                 {
+                    // Find the Dmax goal for this OAR
                     var dmaxGoalDose = structureGoals[oar.Id]
                         .Where(IsDmaxGoal)
                         .Select(GetGoalDoseGy)
                         .FirstOrDefault(d => d.HasValue);
 
+                    // Report if OAR Dmax is less than target lower goal (dose conflict)
                     if (dmaxGoalDose.HasValue && dmaxGoalDose.Value < lowerGoalDose.Value)
                     {
                         results.Add(CreateResult(
-                            "PTV-OAR Overlap",
-                            $"{ptv.Id} overlaps with OAR '{oar.Id}' that has Dmax objective below the PTV lower goal; consider creating {ptv.Id}_eval and documenting in prescription.",
+                            "Target-OAR Overlap",
+                            $"{target.Id} (lower goal: {lowerGoalDose.Value:F2} Gy) overlaps with OAR '{oar.Id}' (Dmax: {dmaxGoalDose.Value:F2} Gy). Consider creating {target.Id}_eval and documenting in prescription.",
                             ValidationSeverity.Warning));
                     }
                 }
             }
 
-            // Add summary if all checked PTVs passed
-            if (results.Count == initialCount && checkedPtvs > 0)
+            // Add summary if all checked targets passed
+            if (results.Count == initialCount && checkedTargets > 0)
             {
                 results.Add(CreateResult(
-                    "PTV-OAR Overlap",
-                    $"All {checkedPtvs} PTV(s) checked - no problematic PTV-OAR overlaps with conflicting dose constraints detected.",
+                    "Target-OAR Overlap",
+                    $"All {checkedTargets} target(s) checked - no problematic target-OAR overlaps with conflicting dose constraints detected.",
                     ValidationSeverity.Info));
             }
         }
 
+        /// <summary>
+        /// Validates that small PTVs and their related targets (CTV/GTV) use high-resolution contouring.
+        /// Small volumes require high resolution for accurate dose calculation and delivery.
+        /// Error for <5cc, Warning for 5-10cc if any related target is not high resolution.
+        /// </summary>
+        /// <param name="structures">Collection of structures to validate</param>
+        /// <param name="results">List to append validation results to</param>
         private static void ValidateSmallVolumeResolution(IEnumerable<Structure> structures, List<ValidationResult> results)
         {
             var structureList = structures.ToList();
             int initialCount = results.Count;
             int checkedPtvs = 0;
-            int ptvCountBelow20cc = 0;
+            int ptvCountBelow10cc = 0;
             double? smallestPtvVolume = null;
 
             foreach (var ptv in structureList.Where(s => s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase)))
@@ -258,12 +314,15 @@ namespace ROcheck
                 checkedPtvs++;
                 double volume = ptv.Volume;
 
+                // Track smallest PTV for info message
                 if (!smallestPtvVolume.HasValue || volume < smallestPtvVolume.Value)
                     smallestPtvVolume = volume;
 
-                if (volume < 20.0)
-                    ptvCountBelow20cc++;
+                // Count PTVs below 10cc threshold for summary message
+                if (volume < 10.0)
+                    ptvCountBelow10cc++;
 
+                // Find related target structures by matching suffix
                 string suffix = GetTargetSuffix(ptv.Id, "PTV");
                 var linkedTargets = new List<Structure>();
 
@@ -277,23 +336,26 @@ namespace ROcheck
                     string.Equals(GetTargetSuffix(s.Id, "GTV"), suffix, StringComparison.OrdinalIgnoreCase));
                 if (matchingGtv != null) linkedTargets.Add(matchingGtv);
 
+                // Check if all related targets use high resolution
                 bool allHighRes = new[] { ptv }.Concat(linkedTargets).All(s => s.IsHighResolution);
 
-                if (volume < 10.0)
+                // Critical error for very small targets (<5cc) without high resolution
+                if (volume < 5.0)
                 {
                     if (!allHighRes)
                     {
                         results.Add(CreateResult(
                             "Target Resolution",
-                            $"PTV '{ptv.Id}' volume is {volume:F1} cc (<10 cc) and not all related targets use high resolution.",
+                            $"PTV '{ptv.Id}' volume is {volume:F1} cc (<5 cc) and not all related targets use high resolution.",
                             ValidationSeverity.Error));
                     }
                 }
-                else if (volume < 20.0 && !allHighRes)
+                // Warning for small targets (5-10cc) without high resolution
+                else if (volume < 10.0 && !allHighRes)
                 {
                     results.Add(CreateResult(
                         "Target Resolution",
-                        $"PTV '{ptv.Id}' volume is {volume:F1} cc (<20 cc) and related targets are not all high resolution.",
+                        $"PTV '{ptv.Id}' volume is {volume:F1} cc (<10 cc) and related targets are not all high resolution.",
                         ValidationSeverity.Warning));
                 }
             }
@@ -302,14 +364,14 @@ namespace ROcheck
             if (results.Count == initialCount && checkedPtvs > 0)
             {
                 string message;
-                if (ptvCountBelow20cc > 0)
+                if (ptvCountBelow10cc > 0)
                 {
-                    // If there are PTVs <20cc
-                    message = $"All {checkedPtvs} PTV(s) checked, {ptvCountBelow20cc} PTV(s) have volume <20 cc, smallest PTV: {smallestPtvVolume:F1} cc.";
+                    // If there are PTVs <10cc
+                    message = $"All {checkedPtvs} PTV(s) checked, {ptvCountBelow10cc} PTV(s) have volume <10 cc, smallest PTV: {smallestPtvVolume:F1} cc.";
                 }
                 else
                 {
-                    // If all PTVs are >20cc
+                    // If all PTVs are ≥10cc
                     message = $"All {checkedPtvs} PTV(s) checked, smallest PTV: {smallestPtvVolume:F1} cc.";
                 }
 
@@ -320,6 +382,13 @@ namespace ROcheck
             }
         }
 
+        /// <summary>
+        /// Validates that target structures have the correct DICOM structure type set.
+        /// Structures named PTV_* should have DicomType="PTV", CTV_* should be "CTV", etc.
+        /// Correct DICOM typing ensures proper structure recognition by planning systems.
+        /// </summary>
+        /// <param name="structures">Collection of structures to validate</param>
+        /// <param name="results">List to append validation results to</param>
         private static void ValidateTargetStructureTypes(IEnumerable<Structure> structures, List<ValidationResult> results)
         {
             int initialCount = results.Count;
@@ -327,6 +396,7 @@ namespace ROcheck
 
             foreach (var structure in structures)
             {
+                // Check PTV structures have PTV DICOM type
                 if (structure.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase))
                 {
                     checkedStructures++;
@@ -339,6 +409,7 @@ namespace ROcheck
                     }
                 }
 
+                // Check CTV structures have CTV DICOM type
                 if (structure.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase))
                 {
                     checkedStructures++;
@@ -351,6 +422,7 @@ namespace ROcheck
                     }
                 }
 
+                // Check GTV structures have GTV DICOM type
                 if (structure.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase))
                 {
                     checkedStructures++;
@@ -448,16 +520,24 @@ namespace ROcheck
             return false;
         }
 
+        /// <summary>
+        /// Builds a dictionary mapping structure IDs to their associated clinical goals.
+        /// Enables fast lookup of all goals for a given structure during validation.
+        /// </summary>
+        /// <param name="clinicalGoals">Collection of clinical goal objects from the plan</param>
+        /// <returns>Dictionary with structure IDs as keys and lists of goals as values</returns>
         private static Dictionary<string, List<object>> BuildStructureGoalLookup(IEnumerable<object> clinicalGoals)
         {
             var lookup = new Dictionary<string, List<object>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var goal in clinicalGoals)
             {
+                // Extract structure ID from goal object using reflection
                 var structureId = GetStructureId(goal);
                 if (string.IsNullOrWhiteSpace(structureId))
                     continue;
 
+                // Add goal to the list for this structure (create list if first goal)
                 if (!lookup.TryGetValue(structureId, out var list))
                 {
                     list = new List<object>();
@@ -470,6 +550,13 @@ namespace ROcheck
             return lookup;
         }
 
+        /// <summary>
+        /// Retrieves clinical goals from the plan using multiple access methods for cross-version compatibility.
+        /// Tries 5 different approaches to handle variations across Eclipse API versions.
+        /// Returns unique goals using HashSet to prevent duplicates.
+        /// </summary>
+        /// <param name="plan">The plan setup containing clinical goals</param>
+        /// <returns>Enumerable collection of clinical goal objects</returns>
         private static IEnumerable<object> GetClinicalGoals(PlanSetup plan)
         {
             if (plan == null)
@@ -654,6 +741,13 @@ namespace ROcheck
             return property?.GetValue(obj);
         }
 
+        /// <summary>
+        /// Extracts target structure IDs from the plan's dose prescription.
+        /// Used for prescription-aware validation to distinguish active treatment targets
+        /// from evaluation/backup structures.
+        /// </summary>
+        /// <param name="plan">The plan setup containing prescription information</param>
+        /// <returns>HashSet of structure IDs that are prescription targets</returns>
         private static HashSet<string> GetPrescriptionTargetIds(PlanSetup plan)
         {
             var targetIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -662,9 +756,10 @@ namespace ROcheck
             {
                 try
                 {
+                    // Iterate through prescription targets to extract structure IDs
                     foreach (var target in plan.RTPrescription.Targets)
                     {
-                        // Try to get the TargetId property
+                        // Use reflection to get TargetId property (handles API variations)
                         var targetId = GetPropertyValue(target, "TargetId") as string;
                         if (!string.IsNullOrEmpty(targetId))
                         {
@@ -674,13 +769,21 @@ namespace ROcheck
                 }
                 catch
                 {
-                    // If accessing prescription targets fails, return empty set
+                    // If prescription access fails, return empty set (all targets will be excluded)
                 }
             }
 
             return targetIds;
         }
 
+        /// <summary>
+        /// Extracts the suffix from a target structure ID after removing the prefix.
+        /// Example: "PTV_59.4" with prefix "PTV" returns "59.4"
+        /// Used to match related structures (PTV_59.4, CTV_59.4, GTV_59.4).
+        /// </summary>
+        /// <param name="structureId">The full structure ID</param>
+        /// <param name="prefix">The prefix to remove (PTV, CTV, GTV)</param>
+        /// <returns>The suffix after the prefix, with leading underscores removed</returns>
         private static string GetTargetSuffix(string structureId, string prefix)
         {
             if (!structureId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
@@ -689,9 +792,22 @@ namespace ROcheck
             return structureId.Substring(prefix.Length).TrimStart('_');
         }
 
+        /// <summary>
+        /// Determines if a structure should be excluded from clinical goal validation.
+        /// Implements prescription-aware exclusion logic for target structures.
+        ///
+        /// Exclusion rules:
+        /// 1. SUPPORT structures (DICOM type = SUPPORT)
+        /// 2. Structures with specific patterns: z_*, *wire*, *Encompass*, *Enc*, *Dose*
+        /// 3. Structures in ExcludedStructures list (Bones, CouchInterior, etc.)
+        /// 4. GTV/CTV/PTV structures NOT in the dose prescription (evaluation/backup targets)
+        /// </summary>
+        /// <param name="structure">The structure to check</param>
+        /// <param name="prescriptionTargetIds">Set of structure IDs from prescription</param>
+        /// <returns>True if structure should be excluded from validation</returns>
         private static bool IsStructureExcluded(Structure structure, HashSet<string> prescriptionTargetIds)
         {
-            // Exclude structures with type 'SUPPORT'
+            // Exclude structures with DICOM type 'SUPPORT'
             if (string.Equals(structure.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase))
                 return true;
 
@@ -705,15 +821,17 @@ namespace ROcheck
                 return true;
             }
 
-            // For GTV/CTV/PTV structures, exclude only those NOT in prescription targets
+            // Prescription-aware exclusion for target volumes (GTV/CTV/PTV)
+            // Only validate targets that are actually in the prescription
             if (structure.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase) ||
                 structure.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase) ||
                 structure.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase))
             {
-                // If not in prescription targets, exclude it
+                // Exclude if NOT in prescription (evaluation or backup structures)
                 return !prescriptionTargetIds.Contains(structure.Id);
             }
 
+            // Check against explicit exclusion list
             return ExcludedStructures.Contains(structure.Id);
         }
 

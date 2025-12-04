@@ -82,7 +82,10 @@ namespace ROcheck
             var clinicalGoals = GetClinicalGoals(plan).ToList();
             var structureGoals = BuildStructureGoalLookup(clinicalGoals);
 
-            ValidateClinicalGoalPresence(structureSet.Structures, structureGoals, results);
+            // Get prescription target IDs
+            var prescriptionTargetIds = GetPrescriptionTargetIds(plan);
+
+            ValidateClinicalGoalPresence(structureSet.Structures, structureGoals, prescriptionTargetIds, results);
             ValidateTargetContainment(structureSet.Structures, structureSet.Image, results);
             ValidatePtvsOverlappingOars(structureSet.Structures, structureSet.Image, structureGoals, results);
             ValidateSmallVolumeResolution(structureSet.Structures, results);
@@ -93,6 +96,7 @@ namespace ROcheck
 
         private static void ValidateClinicalGoalPresence(IEnumerable<Structure> structures,
             Dictionary<string, List<object>> structureGoals,
+            HashSet<string> prescriptionTargetIds,
             List<ValidationResult> results)
         {
             int initialCount = results.Count;
@@ -100,7 +104,7 @@ namespace ROcheck
 
             foreach (var structure in structures)
             {
-                if (IsStructureExcluded(structure))
+                if (IsStructureExcluded(structure, prescriptionTargetIds))
                     continue;
 
                 checkedCount++;
@@ -246,6 +250,7 @@ namespace ROcheck
             var structureList = structures.ToList();
             int initialCount = results.Count;
             int checkedPtvs = 0;
+            int ptvCountBelow20cc = 0;
             double? smallestPtvVolume = null;
 
             foreach (var ptv in structureList.Where(s => s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase)))
@@ -255,6 +260,9 @@ namespace ROcheck
 
                 if (!smallestPtvVolume.HasValue || volume < smallestPtvVolume.Value)
                     smallestPtvVolume = volume;
+
+                if (volume < 20.0)
+                    ptvCountBelow20cc++;
 
                 string suffix = GetTargetSuffix(ptv.Id, "PTV");
                 var linkedTargets = new List<Structure>();
@@ -293,10 +301,21 @@ namespace ROcheck
             // Add summary if all checked PTVs passed
             if (results.Count == initialCount && checkedPtvs > 0)
             {
-                string volumeInfo = smallestPtvVolume.HasValue ? $" - Smallest PTV: {smallestPtvVolume.Value:F1} cc" : "";
+                string message;
+                if (ptvCountBelow20cc > 0)
+                {
+                    // If there are PTVs <20cc
+                    message = $"All {checkedPtvs} PTV(s) checked, {ptvCountBelow20cc} PTV(s) have volume <20 cc, smallest PTV: {smallestPtvVolume:F1} cc.";
+                }
+                else
+                {
+                    // If all PTVs are >20cc
+                    message = $"All {checkedPtvs} PTV(s) checked, smallest PTV: {smallestPtvVolume:F1} cc.";
+                }
+
                 results.Add(CreateResult(
                     "Target Resolution",
-                    $"All {checkedPtvs} PTV(s) checked{volumeInfo}.",
+                    message,
                     ValidationSeverity.Info));
             }
         }
@@ -635,6 +654,33 @@ namespace ROcheck
             return property?.GetValue(obj);
         }
 
+        private static HashSet<string> GetPrescriptionTargetIds(PlanSetup plan)
+        {
+            var targetIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (plan?.RTPrescription != null)
+            {
+                try
+                {
+                    foreach (var target in plan.RTPrescription.Targets)
+                    {
+                        // Try to get the TargetId property
+                        var targetId = GetPropertyValue(target, "TargetId") as string;
+                        if (!string.IsNullOrEmpty(targetId))
+                        {
+                            targetIds.Add(targetId);
+                        }
+                    }
+                }
+                catch
+                {
+                    // If accessing prescription targets fails, return empty set
+                }
+            }
+
+            return targetIds;
+        }
+
         private static string GetTargetSuffix(string structureId, string prefix)
         {
             if (!structureId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
@@ -643,15 +689,29 @@ namespace ROcheck
             return structureId.Substring(prefix.Length).TrimStart('_');
         }
 
-        private static bool IsStructureExcluded(Structure structure)
+        private static bool IsStructureExcluded(Structure structure, HashSet<string> prescriptionTargetIds)
         {
+            // Exclude structures with type 'SUPPORT'
+            if (string.Equals(structure.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // Exclude structures with certain patterns in their names
             if (structure.Id.StartsWith("z_", StringComparison.OrdinalIgnoreCase) ||
-                structure.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase) ||
-                structure.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase) ||
-                structure.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase) ||
-                structure.Id.IndexOf("wire", StringComparison.OrdinalIgnoreCase) >= 0)
+                structure.Id.IndexOf("wire", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                structure.Id.IndexOf("Encompass", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                structure.Id.IndexOf("Enc", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                structure.Id.IndexOf("Dose", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return true;
+            }
+
+            // For GTV/CTV/PTV structures, exclude only those NOT in prescription targets
+            if (structure.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase) ||
+                structure.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase) ||
+                structure.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase))
+            {
+                // If not in prescription targets, exclude it
+                return !prescriptionTargetIds.Contains(structure.Id);
             }
 
             return ExcludedStructures.Contains(structure.Id);

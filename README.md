@@ -36,7 +36,7 @@ ROcheck is an Eclipse Scripting API (ESAPI) plugin that provides systematic vali
 ## Usage
 
 1. Load a treatment plan in Eclipse
-2. Navigate to Scripts menu and select "ROcheck v1.0"
+2. Navigate to Scripts menu and select "ROcheck v1.1.1"
 3. The validation tool will automatically analyze the current plan
 4. Review results organized by category with severity indicators:
    - 🔴 **Error**: Critical issues that must be addressed
@@ -75,7 +75,9 @@ The project uses a composite validator pattern:
 
 ## Version History
 
-- v1.0: Initial release focusing on target/OAR structure QA and clinical goal consistency checks.
+- **v1.1.1**: Enhanced structure exclusion logic with prescription-aware target validation and support structure filtering
+- **v1.1.0**: Comprehensive clinical goals detection with multi-method access and refined validation categories
+- **v1.0**: Initial release focusing on target/OAR structure QA and clinical goal consistency checks
 
 ## License
 

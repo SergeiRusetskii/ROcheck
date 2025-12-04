@@ -36,7 +36,7 @@ The output is an ESAPI plugin file: `ROcheck.esapi.dll` in the `Release/` direct
 
 1. Build the project using the command above
 2. Copy the generated `ROcheck.esapi.dll` file to your Eclipse plugins directory
-3. Restart Eclipse - the plugin will appear in the Scripts menu as "ROcheck v1.0"
+3. Restart Eclipse - the plugin will appear in the Scripts menu as "ROcheck v1.1.1"
 
 ## Architecture
 
@@ -85,15 +85,48 @@ The validation system uses a composite pattern where:
 ### Key Features
 
 1. **Clinical goal coverage**: Ensures applicable structures have at least one associated clinical goal
+   - Prescription-aware: GTV/CTV/PTV structures in dose prescription are validated
+   - Non-prescription targets are automatically excluded from validation
+   - Excludes support structures (DICOM type 'SUPPORT')
+   - Excludes structures with specific keywords: 'wire', 'Encompass', 'Enc', 'Dose'
+
 2. **Target containment**: Flags GTV/CTV volumes that extend beyond their paired PTVs
+
 3. **PTV-OAR overlap awareness**: Warns when lower-dose PTV goals intersect OAR Dmax objectives
+
 4. **Small target resolution**: Enforces high-resolution structures for small-volume PTVs and related targets
+   - Info message shows count of PTVs <20cc when present
+   - Shows smallest PTV volume in all cases
+
 5. **Structure typing**: Validates that PTV/CTV/GTV structures are labeled with the correct types
+
 6. **Severity-based results**: Color-coded results with Error, Warning, and Info levels grouped by validation category
+
+### Structure Exclusion Logic
+
+The validation system intelligently determines which structures to check for clinical goals:
+
+**Always Excluded:**
+- Structures with DICOM type 'SUPPORT'
+- Structures starting with 'z_'
+- Structures containing: 'wire', 'Encompass', 'Enc', 'Dose'
+- Structures in ExcludedStructures list: 'Bones', 'CouchInterior', 'CouchSurface', 'Clips', 'Scar_Wire'
+
+**Prescription-Aware Exclusion (v1.1.1+):**
+- GTV/CTV/PTV structures are checked against plan.RTPrescription.Targets
+- If a GTV/CTV/PTV is **in** the prescription → it is **validated** for clinical goals
+- If a GTV/CTV/PTV is **not in** the prescription → it is **excluded** from validation
+- This ensures only active treatment targets are checked, while excluding evaluation/backup structures
+
+**Implementation:**
+- `GetPrescriptionTargetIds()` extracts target IDs from RTPrescription.Targets using reflection
+- `IsStructureExcluded()` receives prescriptionTargetIds and applies exclusion logic
+- Uses case-insensitive HashSet for efficient target ID lookup
 
 ### ESAPI Integration
 
 - Uses Varian Eclipse Scripting API for accessing treatment plan data
+- Accesses plan.RTPrescription.Targets for prescription-aware validation
 - Requires x64 platform targeting
 - Plugin DLL must be placed in Eclipse's plugin directory
 - Executed within Eclipse treatment planning context with loaded course and plan
@@ -101,7 +134,23 @@ The validation system uses a composite pattern where:
 
 ## Version Management
 
-Current version: v1.0 (as shown in Script.cs window title and README)
+Current version: v1.1.1 (as shown in Script.cs window title and README)
+
+### Version History
+- **v1.1.1**: Enhanced structure exclusion logic
+  - Exclude structures with DICOM type 'SUPPORT'
+  - Smart GTV/CTV/PTV exclusion: only exclude targets NOT in prescription
+  - Targets included in dose prescription are validated for clinical goals
+  - Added exclusion for structures containing 'Encompass', 'Enc', 'Dose'
+  - Improved resolution info messages with PTV count details
+
+- **v1.1.0**: Clinical goals detection improvements
+  - Comprehensive multi-method clinical goals access (5 different approaches)
+  - Fixed clinical goals detection across different ESAPI versions
+  - Refined validation categories (Structure Coverage, Target Containment, etc.)
+  - Added structure exclusions for wire-related structures
+
+- **v1.0**: Initial release with core validation features
 
 ## Development Guidelines
 

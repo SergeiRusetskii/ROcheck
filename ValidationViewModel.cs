@@ -20,7 +20,7 @@ namespace ROcheck
             // summary result so the UI only shows the total result.
             var processedResults = results
                 .GroupBy(r => r.Category)
-                .SelectMany(group =>
+                .SelectMany<IGrouping<string, ValidationResult>, ValidationResult>(group =>
                 {
                     var groupList = group.ToList();
                     bool allPass = groupList.All(r => r.Severity == ValidationSeverity.Info);

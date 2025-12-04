@@ -48,8 +48,7 @@ The output is an ESAPI plugin file: `ROcheck.esapi.dll` in the `Release/` direct
    - `ValidatorBase`: Abstract base class for all validators
    - `CompositeValidator`: Base for validators that contain child validators
    - `RootValidator`: Main validator that orchestrates all validation checks
-   - Individual validator classes for specific plan checks (see Validator Classes section)
-   - `PlanUtilities`: Static utility class with helper methods for common checks
+   - `ClinicalGoalsValidator`: Core validator for structure setup and clinical goal validation
 
 3. **ValidationViewModel.cs** - MVVM pattern view model that:
    - Executes validation using `RootValidator`
@@ -69,37 +68,19 @@ The output is an ESAPI plugin file: `ROcheck.esapi.dll` in the `Release/` direct
 The validation system uses a composite pattern where:
 - Each validator inherits from `ValidatorBase` and implements `Validate(ScriptContext context)`
 - Validators are organized hierarchically under `RootValidator`
-- Results are categorized (e.g., "Clinical Goals", "Structure Setup", "Dose Calculations")
+- Results are categorized (e.g., "ClinicalGoals.Structures", "ClinicalGoals.TargetContainment", "ClinicalGoals.Resolution")
 - Each result has a severity level: `Error`, `Warning`, or `Info`
-- Field-level results can be collapsed into summary results if all pass
+- Results focus on structure setup and clinical goal consistency
 
 ### Validator Classes
 
-The following validators are implemented:
-
-**Structure Validators:**
-- `CourseValidator`: Validates course-level configuration
-- `PlanValidator`: Composite validator for plan-level checks
-- `PlanningStructuresValidator`: Validates structure setup, types, containment, and high-resolution requirements
-
-**Geometry & Setup Validators:**
-- `CTAndPatientValidator`: Validates CT and patient setup
-- `UserOriginMarkerValidator`: Validates user origin placement
-- `SetupFieldsValidator`: Validates setup field configuration
-- `FixationValidator`: Validates patient fixation setup
-
-**Treatment Field Validators:**
-- `FieldsValidator`: Composite validator for field-level checks
-- `FieldNamesValidator`: Validates field naming conventions
-- `GeometryValidator`: Validates beam geometry and collision risks
-
-**Dosimetry Validators:**
-- `DoseValidator`: Validates dose calculations
-- `ReferencePointValidator`: Validates reference point configuration
-
-**Planning Validators:**
-- `OptimizationValidator`: Validates optimization parameters
-- `ClinicalGoalsValidator`: Validates clinical goal coverage and consistency
+**Core Validator:**
+- `ClinicalGoalsValidator`: The primary validator that performs all ROcheck validations:
+  - Clinical goal presence for structures
+  - Target containment (GTV/CTV within PTVs)
+  - PTV-OAR overlap detection with dose comparison
+  - Small volume resolution requirements for PTVs
+  - Structure type validation (PTV/CTV/GTV)
 
 ### Key Features
 
@@ -147,12 +128,19 @@ Current version: v1.0 (as shown in Script.cs window title and README)
 - Test edge cases and null conditions
 - Ensure UI displays results correctly with proper grouping and color coding
 
-## Machine-Specific Configuration
+## Scope
 
-The codebase includes machine-specific checks:
-- Edge machine: `TrueBeamSN6368`
-- Halcyon machines: Identified by name prefix "Halcyon"
-- Update `PlanUtilities` methods if adding support for new machines
+ROcheck is specifically focused on structure setup and clinical goal validation. It does NOT include:
+- Course ID validation
+- CT/User origin validation
+- Dose grid/technique validation
+- Field naming or geometry validation
+- Setup field validation
+- Optimization parameter validation
+- Reference point validation
+- Fixation device validation
+
+These comprehensive plan checks are handled by the separate PlanCrossCheck tool.
 
 ## Reference Documentation
 

@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("ROcheck")]
-[assembly: AssemblyDescription("Eclipse scripting plugin for clinical goal validation")]
+[assembly: AssemblyTitle("Test_ROcheck")]
+[assembly: AssemblyDescription("Eclipse scripting plugin for clinical goal validation (TEST VERSION)")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("ROcheck.esapi")]
+[assembly: AssemblyProduct("Test_ROcheck.esapi")]
 [assembly: AssemblyCopyright("Copyright © rss 2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

@@ -798,7 +798,7 @@ namespace ROcheck
         ///
         /// Exclusion rules:
         /// 1. SUPPORT structures (DICOM type = SUPPORT)
-        /// 2. Structures with specific patterns: z_*, *wire*, *Encompass*, *Enc*, *Dose*
+        /// 2. Structures with specific patterns: z_*, *wire*, *Encompass*, *Enc Marker*, *Dose*
         /// 3. Structures in ExcludedStructures list (Bones, CouchInterior, etc.)
         /// 4. GTV/CTV/PTV structures NOT in the dose prescription (evaluation/backup targets)
         /// </summary>
@@ -815,7 +815,7 @@ namespace ROcheck
             if (structure.Id.StartsWith("z_", StringComparison.OrdinalIgnoreCase) ||
                 structure.Id.IndexOf("wire", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 structure.Id.IndexOf("Encompass", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                structure.Id.IndexOf("Enc", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                structure.Id.IndexOf("Enc Marker", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 structure.Id.IndexOf("Dose", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return true;

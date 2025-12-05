@@ -215,9 +215,15 @@ namespace ROcheck
         }
 
         /// <summary>
-        /// Validates that target volumes (GTV/CTV/PTV) with lower dose goals don't overlap with OARs
-        /// that have Dmax objectives below the target's lower goal dose. This identifies potential
-        /// dose conflicts where an OAR maximum dose constraint is lower than the minimum target dose.
+        /// Validates that target volumes with lower dose goals don't overlap with OARs
+        /// that have Dmax objectives below the target's lower goal dose.
+        ///
+        /// Optimized algorithm:
+        /// 1. Find all structures with lower objectives (targets)
+        /// 2. Find all OARs with Dmax goals
+        /// 3. Create all pairs
+        /// 4. Filter by dose comparison (target lower goal > OAR Dmax) - cheap operation
+        /// 5. Check spatial overlap ONLY for dose-conflicting pairs - expensive operation
         /// </summary>
         private static void ValidateTargetsOverlappingOars(IEnumerable<Structure> structures,
             Image image,
@@ -233,64 +239,100 @@ namespace ROcheck
                 return;
 
             int initialCount = results.Count;
-            int checkedTargets = 0;
 
-            // Check all target volumes (GTV, CTV, PTV) for overlaps with OARs
-            foreach (var target in structureList.Where(s =>
-                s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase) ||
-                s.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase) ||
-                s.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase)))
+            // Step 1: Find all structures with lower objectives (targets)
+            var targetsWithLowerGoals = new List<(Structure structure, double lowerGoalDose)>();
+
+            foreach (var structure in structureList)
             {
-                // Skip if this target doesn't have clinical goals
-                if (!structureGoals.TryGetValue(target.Id, out var targetGoals))
+                if (!structureGoals.TryGetValue(structure.Id, out var goals))
                     continue;
 
-                // Find the lower dose goal (minimum dose constraint) for this target
-                var lowerGoalDose = targetGoals
+                var lowerGoalDose = goals
                     .Where(IsLowerGoal)
                     .Select(goal => GetGoalDoseGy(goal, plan))
                     .FirstOrDefault(d => d.HasValue);
 
-                // Skip if no lower goal found
-                if (!lowerGoalDose.HasValue)
+                if (lowerGoalDose.HasValue)
+                {
+                    targetsWithLowerGoals.Add((structure, lowerGoalDose.Value));
+                }
+            }
+
+            // Step 2: Find all OARs with Dmax goals
+            var oarsWithDmax = new List<(Structure structure, double dmaxDose)>();
+
+            foreach (var structure in structureList)
+            {
+                if (!structureGoals.TryGetValue(structure.Id, out var goals))
                     continue;
 
-                checkedTargets++;
+                var dmaxDose = goals
+                    .Where(IsDmaxGoal)
+                    .Select(goal => GetGoalDoseGy(goal, plan))
+                    .FirstOrDefault(d => d.HasValue);
 
-                // Find all non-target structures (potential OARs) that overlap with this target
-                var overlappingOars = structureList
-                    .Where(s => !s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase)
-                                && !s.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase)
-                                && !s.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase)
-                                && structureGoals.ContainsKey(s.Id)
-                                && StructuresOverlap(target, s, image));
-
-                // Check each overlapping OAR for conflicting dose constraints
-                foreach (var oar in overlappingOars)
+                if (dmaxDose.HasValue)
                 {
-                    // Find the Dmax goal for this OAR
-                    var dmaxGoalDose = structureGoals[oar.Id]
-                        .Where(IsDmaxGoal)
-                        .Select(goal => GetGoalDoseGy(goal, plan))
-                        .FirstOrDefault(d => d.HasValue);
+                    oarsWithDmax.Add((structure, dmaxDose.Value));
+                }
+            }
 
-                    // Report if OAR Dmax is less than target lower goal (dose conflict)
-                    if (dmaxGoalDose.HasValue && dmaxGoalDose.Value < lowerGoalDose.Value)
+            // Step 3 & 4: Create pairs and filter by dose comparison (cheap operation)
+            var doseConflictPairs = new List<(Structure target, double targetDose, Structure oar, double oarDmax)>();
+
+            foreach (var target in targetsWithLowerGoals)
+            {
+                foreach (var oar in oarsWithDmax)
+                {
+                    // Skip if target and OAR are the same structure
+                    if (target.structure.Id.Equals(oar.structure.Id, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    // Filter by dose: target lower goal > OAR Dmax = potential conflict
+                    if (target.lowerGoalDose > oar.dmaxDose)
                     {
-                        results.Add(CreateResult(
-                            "Target-OAR Overlap",
-                            $"{target.Id} (lower goal: {lowerGoalDose.Value:F2} Gy) overlaps with OAR '{oar.Id}' (Dmax: {dmaxGoalDose.Value:F2} Gy). Consider creating {target.Id}_eval and documenting in prescription.",
-                            ValidationSeverity.Warning));
+                        doseConflictPairs.Add((target.structure, target.lowerGoalDose, oar.structure, oar.dmaxDose));
                     }
                 }
             }
 
-            // Add summary if all checked targets passed
-            if (results.Count == initialCount && checkedTargets > 0)
+            // Step 5: Check spatial overlap ONLY for dose-conflicting pairs (expensive operation)
+            int overlapCount = 0;
+            foreach (var pair in doseConflictPairs)
+            {
+                if (StructuresOverlap(pair.target, pair.oar, image))
+                {
+                    results.Add(CreateResult(
+                        "Target-OAR Overlap",
+                        $"{pair.target.Id} (lower goal: {pair.targetDose:F2} Gy) overlaps with OAR '{pair.oar.Id}' (Dmax: {pair.oarDmax:F2} Gy).",
+                        ValidationSeverity.Warning));
+                    overlapCount++;
+                }
+            }
+
+            // Add recommendation if any overlaps were found
+            if (overlapCount > 0)
             {
                 results.Add(CreateResult(
                     "Target-OAR Overlap",
-                    $"All {checkedTargets} target(s) checked - no problematic target-OAR overlaps with conflicting dose constraints detected.",
+                    $"Consider creating _eval structures and leaving comment in prescription.",
+                    ValidationSeverity.Info));
+            }
+            else if (doseConflictPairs.Count > 0)
+            {
+                // Dose conflicts exist but no spatial overlaps
+                results.Add(CreateResult(
+                    "Target-OAR Overlap",
+                    $"No spatial overlaps detected between targets and OARs with conflicting dose constraints.",
+                    ValidationSeverity.Info));
+            }
+            else
+            {
+                // No dose conflicts at all
+                results.Add(CreateResult(
+                    "Target-OAR Overlap",
+                    $"No target-OAR dose conflicts detected.",
                     ValidationSeverity.Info));
             }
         }
@@ -655,58 +697,137 @@ namespace ROcheck
             return null;
         }
 
+        /// <summary>
+        /// Determines if a clinical goal is a lower bound (minimum dose) constraint.
+        /// Checks ObjectiveAsString for presence of ≥ (U+2265) or > which indicates
+        /// "at least" constraints typical of target minimum dose goals.
+        /// Examples: "D 95.5 % ≥ 56.43 Gy", "V 50.50 Gy > 95.0 %"
+        /// </summary>
         private static bool IsLowerGoal(object goal)
         {
-            var criteriaText = (GetPropertyValue(goal, "GoalCriteria") ??
-                                GetPropertyValue(goal, "GoalOperator") ??
-                                GetPropertyValue(goal, "Operator"))?.ToString();
+            var objectiveString = GetPropertyValue(goal, "ObjectiveAsString")?.ToString();
 
-            if (string.IsNullOrWhiteSpace(criteriaText))
+            if (string.IsNullOrWhiteSpace(objectiveString))
                 return false;
 
-            return criteriaText.IndexOf("lower", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   criteriaText.IndexOf("greater", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   criteriaText.IndexOf("atleast", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   criteriaText.Contains(">=");
+            // Lower goals use ≥ (Unicode U+2265) or > operators (at least / greater than)
+            // Also check for ASCII ">=" as fallback
+            return objectiveString.Contains("≥") ||
+                   objectiveString.Contains(">") ||
+                   objectiveString.Contains(">=");
         }
 
+        /// <summary>
+        /// Determines if a clinical goal is a Dmax (maximum dose) constraint.
+        /// Checks MeasureType for any "Max" type AND ObjectiveAsString contains "Dmax".
+        /// Example: MeasureType=MeasureTypeGoalMax or MeasureTypeDoseMax, ObjectiveAsString="Dmax < 54.00 Gy"
+        /// </summary>
         private static bool IsDmaxGoal(object goal)
         {
-            var typeText = (GetPropertyValue(goal, "GoalType") ?? GetPropertyValue(goal, "Type"))?.ToString();
-            var nameText = (GetPropertyValue(goal, "Name") ?? GetPropertyValue(goal, "Id"))?.ToString();
-            return (typeText != null && typeText.IndexOf("max", StringComparison.OrdinalIgnoreCase) >= 0)
-                   || (nameText != null && nameText.IndexOf("dmax", StringComparison.OrdinalIgnoreCase) >= 0);
+            var measureType = GetPropertyValue(goal, "MeasureType")?.ToString();
+            var objectiveString = GetPropertyValue(goal, "ObjectiveAsString")?.ToString();
+
+            if (string.IsNullOrWhiteSpace(objectiveString))
+                return false;
+
+            // Check if ObjectiveAsString contains "Dmax" (case insensitive)
+            // This is the most reliable indicator of a maximum dose constraint
+            bool isDmax = objectiveString.IndexOf("Dmax", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                          objectiveString.IndexOf("D max", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            // Optional: Also verify MeasureType contains "Max" for additional validation
+            // But prioritize the ObjectiveAsString check as it's more explicit
+            if (isDmax)
+                return true;
+
+            // Fallback: If MeasureType contains "Max" and objectiveString has < or ≤
+            bool hasMaxMeasure = measureType != null && measureType.IndexOf("Max", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool hasLessOperator = objectiveString.Contains("<") || objectiveString.Contains("≤");
+
+            return hasMaxMeasure && hasLessOperator;
         }
 
+        /// <summary>
+        /// Extracts the dose value in Gy from a clinical goal object.
+        /// First attempts to extract from Objective property, then falls back to
+        /// parsing ObjectiveAsString for dose values.
+        /// Handles formats like "D 95.5 % >= 56.43 Gy", "Dmax < 54.00 Gy", "V 50.50 Gy >= 95.0 %"
+        /// </summary>
         private static double? GetGoalDoseGy(object goal, PlanSetup plan)
         {
-            var doseObject = GetPropertyValue(goal, "Dose")
-                             ?? GetPropertyValue(goal, "DoseGoal")
-                             ?? GetPropertyValue(goal, "TargetDose")
-                             ?? GetPropertyValue(goal, "Goal")
-                             ?? GetPropertyValue(goal, "ObjectiveValue");
-
-            if (doseObject is DoseValue doseValue)
-                return NormalizeDoseValueGy(doseValue, plan);
-
-            if (doseObject is double doubleDose)
-                return doubleDose;
-
-            if (doseObject is float floatDose)
-                return floatDose;
-
-            var property = doseObject?.GetType().GetProperty("Dose");
-            if (property != null)
+            // First try to get Objective property and extract dose from it
+            var objective = GetPropertyValue(goal, "Objective");
+            if (objective != null)
             {
-                var innerDose = property.GetValue(doseObject);
-                if (innerDose is DoseValue innerDoseValue)
-                    return NormalizeDoseValueGy(innerDoseValue, plan);
+                // Try to get DoseValue from Objective
+                var doseProperty = objective.GetType().GetProperty("DoseValue");
+                if (doseProperty != null)
+                {
+                    var doseValue = doseProperty.GetValue(objective);
+                    if (doseValue is DoseValue dv)
+                        return NormalizeDoseValueGy(dv, plan);
+                }
 
-                if (innerDose is double innerDouble)
-                    return innerDouble;
+                // Try other potential dose properties on Objective
+                var doseAltProperty = objective.GetType().GetProperty("Dose");
+                if (doseAltProperty != null)
+                {
+                    var doseAlt = doseAltProperty.GetValue(objective);
+                    if (doseAlt is DoseValue dvAlt)
+                        return NormalizeDoseValueGy(dvAlt, plan);
+                }
+            }
 
-                if (innerDose is float innerFloat)
-                    return innerFloat;
+            // Fall back to parsing ObjectiveAsString
+            var objectiveString = GetPropertyValue(goal, "ObjectiveAsString")?.ToString();
+            if (string.IsNullOrWhiteSpace(objectiveString))
+                return null;
+
+            return ParseDoseFromObjectiveString(objectiveString, plan);
+        }
+
+        /// <summary>
+        /// Parses dose value from ObjectiveAsString.
+        /// Examples: "D 95.5 % >= 56.43 Gy" → 56.43
+        ///           "Dmax < 54.00 Gy" → 54.00
+        ///           "V 50.50 Gy >= 95.0 %" → 50.50
+        /// </summary>
+        private static double? ParseDoseFromObjectiveString(string objectiveString, PlanSetup plan)
+        {
+            if (string.IsNullOrWhiteSpace(objectiveString))
+                return null;
+
+            // Use regex to find numeric values followed by dose units
+            var gyMatch = System.Text.RegularExpressions.Regex.Match(
+                objectiveString,
+                @"(\d+\.?\d*)\s*(Gy|cGy)",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (gyMatch.Success)
+            {
+                if (double.TryParse(gyMatch.Groups[1].Value, out double dose))
+                {
+                    var unit = gyMatch.Groups[2].Value;
+
+                    // Convert cGy to Gy if needed
+                    if (unit.Equals("cGy", StringComparison.OrdinalIgnoreCase))
+                        return dose / 100.0;
+
+                    return dose;
+                }
+            }
+
+            // Try to find percentage values and convert to Gy
+            var percentMatch = System.Text.RegularExpressions.Regex.Match(
+                objectiveString,
+                @"(\d+\.?\d*)\s*%");
+
+            if (percentMatch.Success)
+            {
+                if (double.TryParse(percentMatch.Groups[1].Value, out double percent))
+                {
+                    return ConvertPercentToGy(percent, plan);
+                }
             }
 
             return null;
@@ -751,13 +872,13 @@ namespace ROcheck
             if (totalDose == null)
                 return null;
 
-            var unitText = totalDose.Unit.ToString();
+            var unitText = totalDose.Value.Unit.ToString();
 
             if (unitText.Equals("Gy", StringComparison.OrdinalIgnoreCase))
-                return totalDose.Dose;
+                return totalDose.Value.Dose;
 
             if (unitText.Equals("cGy", StringComparison.OrdinalIgnoreCase))
-                return totalDose.Dose / 100.0;
+                return totalDose.Value.Dose / 100.0;
 
             return null;
         }
@@ -860,6 +981,112 @@ namespace ROcheck
 
             // Check against explicit exclusion list
             return ExcludedStructures.Contains(structure.Id);
+        }
+
+        /// <summary>
+        /// Diagnostic method to print ALL available information from clinical goals.
+        /// Prints ToString(), type name, all properties, and all fields.
+        /// </summary>
+        private static void PrintClinicalGoalsDiagnostic(List<object> clinicalGoals, List<ValidationResult> results)
+        {
+            results.Add(CreateResult(
+                "DIAGNOSTIC - Clinical Goals",
+                $"Total clinical goals found: {clinicalGoals.Count}",
+                ValidationSeverity.Info));
+
+            int goalNumber = 0;
+            foreach (var goal in clinicalGoals)
+            {
+                goalNumber++;
+                var goalType = goal.GetType();
+
+                results.Add(CreateResult(
+                    "DIAGNOSTIC - Clinical Goals",
+                    $"========== Goal #{goalNumber} ==========",
+                    ValidationSeverity.Info));
+
+                // Print ToString() representation
+                try
+                {
+                    var toStringValue = goal.ToString();
+                    results.Add(CreateResult(
+                        "DIAGNOSTIC - Clinical Goals",
+                        $"  ToString(): {toStringValue}",
+                        ValidationSeverity.Info));
+                }
+                catch (Exception ex)
+                {
+                    results.Add(CreateResult(
+                        "DIAGNOSTIC - Clinical Goals",
+                        $"  ToString(): <error: {ex.Message}>",
+                        ValidationSeverity.Info));
+                }
+
+                // Print exact type name
+                results.Add(CreateResult(
+                    "DIAGNOSTIC - Clinical Goals",
+                    $"  Type: {goalType.FullName}",
+                    ValidationSeverity.Info));
+
+                // Print ALL properties
+                var properties = goalType.GetProperties(System.Reflection.BindingFlags.Public |
+                                                       System.Reflection.BindingFlags.Instance);
+                results.Add(CreateResult(
+                    "DIAGNOSTIC - Clinical Goals",
+                    $"  Properties ({properties.Length}):",
+                    ValidationSeverity.Info));
+
+                foreach (var prop in properties)
+                {
+                    try
+                    {
+                        var val = prop.GetValue(goal);
+                        var propType = prop.PropertyType.Name;
+                        results.Add(CreateResult(
+                            "DIAGNOSTIC - Clinical Goals",
+                            $"    {prop.Name} ({propType}): {val ?? "<null>"}",
+                            ValidationSeverity.Info));
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Add(CreateResult(
+                            "DIAGNOSTIC - Clinical Goals",
+                            $"    {prop.Name}: <error: {ex.Message}>",
+                            ValidationSeverity.Info));
+                    }
+                }
+
+                // Print ALL fields
+                var fields = goalType.GetFields(System.Reflection.BindingFlags.Public |
+                                               System.Reflection.BindingFlags.Instance);
+                if (fields.Length > 0)
+                {
+                    results.Add(CreateResult(
+                        "DIAGNOSTIC - Clinical Goals",
+                        $"  Fields ({fields.Length}):",
+                        ValidationSeverity.Info));
+
+                    foreach (var field in fields)
+                    {
+                        try
+                        {
+                            var val = field.GetValue(goal);
+                            var fieldType = field.FieldType.Name;
+                            results.Add(CreateResult(
+                                "DIAGNOSTIC - Clinical Goals",
+                                $"    {field.Name} ({fieldType}): {val ?? "<null>"}",
+                                ValidationSeverity.Info));
+                        }
+                        catch (Exception ex)
+                        {
+                            results.Add(CreateResult(
+                                "DIAGNOSTIC - Clinical Goals",
+                                $"    {field.Name}: <error: {ex.Message}>",
+                                ValidationSeverity.Info));
+                        }
+                    }
+                }
+            }
         }
 
         private static ValidationResult CreateResult(string category, string message, ValidationSeverity severity)

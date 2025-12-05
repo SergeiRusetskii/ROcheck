@@ -36,7 +36,7 @@ The output is an ESAPI plugin file: `ROcheck.esapi.dll` in the `Release/` direct
 
 1. Build the project using the command above
 2. Copy the generated `ROcheck.esapi.dll` file to your Eclipse plugins directory
-3. Restart Eclipse - the plugin will appear in the Scripts menu as "ROcheck v1.1.1"
+3. Restart Eclipse - the plugin will appear in the Scripts menu as "ROcheck v1.2.0"
 
 ## Architecture
 
@@ -92,10 +92,16 @@ The validation system uses a composite pattern where:
 
 2. **Target containment**: Flags GTV/CTV volumes that extend beyond their paired PTVs
 
-3. **PTV-OAR overlap awareness**: Warns when lower-dose PTV goals intersect OAR Dmax objectives
+3. **Target-OAR overlap detection**: Identifies targets with lower dose goals that overlap OARs with conflicting Dmax constraints
+   - Uses optimized algorithm: filters by dose comparison first (cheap), then checks spatial overlap (expensive)
+   - Detects all structures with lower objectives (minimum dose goals using ≥ or > operators)
+   - Detects all OARs with Dmax goals (maximum dose constraints)
+   - Reports overlaps where target lower goal > OAR Dmax
+   - Provides recommendation to create _eval structures and document in prescription
 
 4. **Small target resolution**: Enforces high-resolution structures for small-volume PTVs and related targets
-   - Info message shows count of PTVs <20cc when present
+   - Error for PTVs <5cc without high resolution (was <10cc in v1.1.x)
+   - Warning for PTVs 5-10cc without high resolution (was 10-20cc in v1.1.x)
    - Shows smallest PTV volume in all cases
 
 5. **Structure typing**: Validates that PTV/CTV/GTV structures are labeled with the correct types
@@ -134,9 +140,17 @@ The validation system intelligently determines which structures to check for cli
 
 ## Version Management
 
-Current version: v1.1.1 (as shown in Script.cs window title and README)
+Current version: v1.2.0 (as shown in Script.cs window title)
 
 ### Version History
+- **v1.2.0**: Target-OAR overlap detection now fully working
+  - Fixed clinical goal detection using Unicode comparison operators (≥, ≤, >, <)
+  - Implemented optimized overlap detection algorithm (dose filter first, then spatial overlap)
+  - Parse dose values from ObjectiveAsString using regex when properties unavailable
+  - Updated resolution thresholds: <5cc error, 5-10cc warning (was <10cc error, 10-20cc warning)
+  - Cleaner output with single recommendation message for overlaps
+  - Comprehensive XML documentation throughout codebase
+
 - **v1.1.1**: Enhanced structure exclusion logic
   - Exclude structures with DICOM type 'SUPPORT'
   - Smart GTV/CTV/PTV exclusion: only exclude targets NOT in prescription

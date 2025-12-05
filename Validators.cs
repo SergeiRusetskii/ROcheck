@@ -97,7 +97,7 @@ namespace ROcheck
             // Execute all validation checks
             ValidateClinicalGoalPresence(structureSet.Structures, structureGoals, prescriptionTargetIds, results);
             ValidateTargetContainment(structureSet.Structures, structureSet.Image, results);
-            ValidateTargetsOverlappingOars(structureSet.Structures, structureSet.Image, structureGoals, results);
+            ValidateTargetsOverlappingOars(structureSet.Structures, structureSet.Image, structureGoals, plan, results);
             ValidateSmallVolumeResolution(structureSet.Structures, results);
             ValidateTargetStructureTypes(structureSet.Structures, results);
 
@@ -222,6 +222,7 @@ namespace ROcheck
         private static void ValidateTargetsOverlappingOars(IEnumerable<Structure> structures,
             Image image,
             Dictionary<string, List<object>> structureGoals,
+            PlanSetup plan,
             List<ValidationResult> results)
         {
             var structureList = structures.ToList();
@@ -247,7 +248,7 @@ namespace ROcheck
                 // Find the lower dose goal (minimum dose constraint) for this target
                 var lowerGoalDose = targetGoals
                     .Where(IsLowerGoal)
-                    .Select(GetGoalDoseGy)
+                    .Select(goal => GetGoalDoseGy(goal, plan))
                     .FirstOrDefault(d => d.HasValue);
 
                 // Skip if no lower goal found
@@ -270,7 +271,7 @@ namespace ROcheck
                     // Find the Dmax goal for this OAR
                     var dmaxGoalDose = structureGoals[oar.Id]
                         .Where(IsDmaxGoal)
-                        .Select(GetGoalDoseGy)
+                        .Select(goal => GetGoalDoseGy(goal, plan))
                         .FirstOrDefault(d => d.HasValue);
 
                     // Report if OAR Dmax is less than target lower goal (dose conflict)
@@ -677,7 +678,7 @@ namespace ROcheck
                    || (nameText != null && nameText.IndexOf("dmax", StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
-        private static double? GetGoalDoseGy(object goal)
+        private static double? GetGoalDoseGy(object goal, PlanSetup plan)
         {
             var doseObject = GetPropertyValue(goal, "Dose")
                              ?? GetPropertyValue(goal, "DoseGoal")
@@ -686,7 +687,7 @@ namespace ROcheck
                              ?? GetPropertyValue(goal, "ObjectiveValue");
 
             if (doseObject is DoseValue doseValue)
-                return NormalizeDoseValueGy(doseValue);
+                return NormalizeDoseValueGy(doseValue, plan);
 
             if (doseObject is double doubleDose)
                 return doubleDose;
@@ -699,7 +700,7 @@ namespace ROcheck
             {
                 var innerDose = property.GetValue(doseObject);
                 if (innerDose is DoseValue innerDoseValue)
-                    return NormalizeDoseValueGy(innerDoseValue);
+                    return NormalizeDoseValueGy(innerDoseValue, plan);
 
                 if (innerDose is double innerDouble)
                     return innerDouble;
@@ -711,7 +712,7 @@ namespace ROcheck
             return null;
         }
 
-        private static double? NormalizeDoseValueGy(DoseValue doseValue)
+        private static double? NormalizeDoseValueGy(DoseValue doseValue, PlanSetup plan = null)
         {
             var unitText = doseValue.Unit.ToString();
 
@@ -722,17 +723,43 @@ namespace ROcheck
                 return doseValue.Dose / 100.0;
 
             if (unitText.IndexOf("Percent", StringComparison.OrdinalIgnoreCase) >= 0)
-                return null;
+                return ConvertPercentToGy(doseValue.Dose, plan);
 
             var presentationProperty = typeof(DoseValue).GetProperty("Presentation");
             if (presentationProperty != null)
             {
                 var presentationValue = presentationProperty.GetValue(doseValue)?.ToString();
                 if (presentationValue?.IndexOf("Relative", StringComparison.OrdinalIgnoreCase) >= 0)
-                    return null;
+                    return ConvertPercentToGy(doseValue.Dose, plan);
             }
 
             return doseValue.Dose;
+        }
+
+        private static double? ConvertPercentToGy(double percentValue, PlanSetup plan)
+        {
+            var totalDoseGy = GetPlanTotalDoseGy(plan);
+            if (!totalDoseGy.HasValue)
+                return null;
+
+            return totalDoseGy.Value * percentValue / 100.0;
+        }
+
+        private static double? GetPlanTotalDoseGy(PlanSetup plan)
+        {
+            var totalDose = plan?.TotalDose;
+            if (totalDose == null)
+                return null;
+
+            var unitText = totalDose.Unit.ToString();
+
+            if (unitText.Equals("Gy", StringComparison.OrdinalIgnoreCase))
+                return totalDose.Dose;
+
+            if (unitText.Equals("cGy", StringComparison.OrdinalIgnoreCase))
+                return totalDose.Dose / 100.0;
+
+            return null;
         }
 
         private static object GetPropertyValue(object obj, string propertyName)

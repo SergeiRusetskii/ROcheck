@@ -137,6 +137,38 @@ echo '{"status": "clean", "timestamp": "'$(date -Iseconds)'"}' > .claude/.last_s
 - DO NOT commit without updating metafiles
 - ALWAYS mark session clean at completion
 
+## ESAPI Documentation
+
+**Location:** `Documentation/`
+
+This project includes complete ESAPI API reference documentation:
+
+**XML IntelliSense Files (use with Read tool or Grep):**
+- `Documentation/VMS.TPS.Common.Model.API.xml` - Complete API reference
+- `Documentation/VMS.TPS.Common.Model.Types.xml` - Type definitions and enums
+
+**PDF Reference Guides:**
+- `Eclipse Scripting API Reference Guide 18.0.pdf` - Official ESAPI manual
+- `Image Registration and Segmentation Scripting API Reference Guide.pdf`
+- `VarianApiBook.pdf` - Comprehensive programming guide
+
+**When to use:**
+- Planning features - verify method availability and signatures
+- Implementing code - check parameters, return types, null safety
+- Explaining code - reference official documentation
+- Troubleshooting - understand expected behavior
+
+**Example usage:**
+```bash
+# Find Structure class documentation
+grep -A 20 "T:VMS.TPS.Common.Model.API.Structure" Documentation/VMS.TPS.Common.Model.API.xml
+
+# Find specific method
+grep -A 10 "M:VMS.TPS.Common.Model.API.Structure.OverlapsWith" Documentation/VMS.TPS.Common.Model.API.xml
+```
+
+See `.claude/ARCHITECTURE.md` for detailed usage guide.
+
 ---
 
 ## Legacy Migration Protocol

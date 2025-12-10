@@ -46,8 +46,28 @@ description: Объяснить как работает определенная
 - Предложи альтернативные подходы (если есть)
 - Добавь ссылки на документацию (если нужно)
 
+**ESAPI методы - используй документацию:**
+
+Когда объясняешь ESAPI код, проверяй официальную документацию:
+
+```bash
+# Найди класс или метод в XML документации
+grep -A 15 "M:VMS.TPS.Common.Model.API.Structure.OverlapsWith" Documentation/VMS.TPS.Common.Model.API.xml
+```
+
+Или используй Read tool для подробного изучения:
+- `Documentation/VMS.TPS.Common.Model.API.xml` - все ESAPI классы и методы
+- `Documentation/VMS.TPS.Common.Model.Types.xml` - типы данных и enums
+
+**Включи в объяснение:**
+- Официальное описание метода из XML документации
+- Параметры и их типы
+- Return type и возможность null
+- Threading requirements (UI thread для ESAPI)
+- Null safety considerations
+
 **Примеры вопросов для объяснения:**
-- "Объясни как работает аутентификация в middleware.ts"
-- "Как реализован streaming в /api/chat?"
-- "Что делает этот Server Action?"
-- "Как работает этот хук?"
+- "Объясни как работает ClinicalGoalsValidator"
+- "Что делает Structure.OverlapsWith()?"
+- "Как работает ValidationViewModel?"
+- "Объясни composite pattern в validators"

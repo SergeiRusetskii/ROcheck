@@ -218,5 +218,86 @@ msbuild ROcheck.sln /p:Configuration=Release /p:Platform=x64
 ❌ Reference point validation
 ❌ Fixation device validation
 
+## ESAPI API Reference Documentation
+
+**Location:** `Documentation/`
+
+### XML IntelliSense Documentation
+
+**VMS.TPS.Common.Model.API.xml**
+- Complete API reference for VMS.TPS.Common.Model.API.dll
+- Contains IntelliSense documentation for all ESAPI classes, methods, properties
+- Essential for development - look up any ESAPI type, method, or property
+- Use with Read tool to find method signatures and descriptions
+
+**VMS.TPS.Common.Model.Types.xml**
+- Complete API reference for VMS.TPS.Common.Model.Types.dll
+- Contains IntelliSense documentation for all ESAPI types and enums
+- Essential for understanding data types used in ESAPI
+
+### How to Use XML Documentation
+
+**Finding a method:**
+```bash
+# Search for a specific class or method
+grep -A 10 "T:VMS.TPS.Common.Model.API.Structure" Documentation/VMS.TPS.Common.Model.API.xml
+grep -A 10 "M:VMS.TPS.Common.Model.API.Structure.OverlapsWith" Documentation/VMS.TPS.Common.Model.API.xml
+```
+
+**Reading method documentation:**
+Use the Read tool to read specific sections of the XML files:
+```
+Read Documentation/VMS.TPS.Common.Model.API.xml
+Search for member name="M:VMS.TPS.Common.Model.API.Structure.OverlapsWith"
+```
+
+**Common classes to reference:**
+- `Structure` - Structure geometry and properties
+- `PlanSetup` - Treatment plan data
+- `Dose` - Dose distribution
+- `StructureSet` - Collection of structures
+- `Course` - Course and prescription data
+- `Patient` - Patient demographics
+- `Image` - CT/MR imaging data
+
+### PDF Documentation
+
+**Eclipse Scripting API Reference Guide 18.0.pdf**
+- Official ESAPI reference manual
+- Architecture overview, code examples, best practices
+- Essential reading for understanding ESAPI concepts
+
+**Image Registration and Segmentation Scripting API Reference Guide.pdf**
+- Advanced image processing and registration
+- Segmentation algorithms
+
+**VarianApiBook.pdf**
+- Comprehensive ESAPI programming guide
+- Code samples and patterns
+- Advanced topics
+
+### When to Use Documentation
+
+**During /feature planning:**
+- Check XML docs to verify method availability
+- Understand method parameters and return types
+- Find example usage patterns
+
+**During /explain:**
+- Reference XML docs to explain ESAPI method behavior
+- Look up property descriptions
+- Understand type relationships
+
+**During development:**
+- Verify method signatures before implementing
+- Check for null return possibilities
+- Understand threading requirements
+
+**Example workflow:**
+1. Need to check if Structure has Volume property
+2. `grep "P:VMS.TPS.Common.Model.API.Structure.Volume" Documentation/VMS.TPS.Common.Model.API.xml`
+3. Read documentation to understand data type and null safety
+4. Implement with proper null checks
+
 ---
 *Framework: Claude Code Starter v2.1*

@@ -27,6 +27,17 @@ description: Помочь спланировать и реализовать н�
 - Какие Severity levels (Error/Warning/Info)?
 - Нужна ли интеграция с другими валидаторами?
 
+**Проверь ESAPI документацию:**
+```bash
+# Найди нужный класс или метод
+grep -A 10 "T:VMS.TPS.Common.Model.API.Structure" Documentation/VMS.TPS.Common.Model.API.xml
+grep -A 10 "M:VMS.TPS.Common.Model.API.Structure.Volume" Documentation/VMS.TPS.Common.Model.API.xml
+```
+
+Или используй Read tool:
+- `Documentation/VMS.TPS.Common.Model.API.xml` - для API классов и методов
+- `Documentation/VMS.TPS.Common.Model.Types.xml` - для типов и enums
+
 ## 3. Безопасность и Надежность
 
 **ESAPI threading:**

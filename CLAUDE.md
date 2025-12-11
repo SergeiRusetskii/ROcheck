@@ -3,6 +3,13 @@
 **Framework:** Claude Code Starter v2.1
 **Type:** Meta-framework extending Claude Code capabilities
 
+## Project-Specific Rules
+
+**Build Policy:**
+- User builds the project manually
+- NEVER execute msbuild or other build commands via Bash tool
+- Only suggest build commands if needed, but do not execute them
+
 ## Triggers
 
 **"start", "начать":**

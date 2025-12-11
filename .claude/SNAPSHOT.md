@@ -1,7 +1,7 @@
 # SNAPSHOT — ROcheck
 
 *Framework: Claude Code Starter v2.1*
-*Last updated: 2025-12-10*
+*Last updated: 2025-12-11*
 
 > **Planning Documents:**
 > - 🎯 Current tasks: [BACKLOG.md](./BACKLOG.md)
@@ -11,8 +11,8 @@
 
 ## Current State
 
-**Version:** v1.2.0
-**Status:** Production - Target-OAR overlap detection fully working
+**Version:** v1.4.0
+**Status:** Production - Refactored and ready for deployment
 **Branch:** master
 
 ## Project Overview
@@ -32,7 +32,11 @@
 ```
 ROcheck/
 ├── Script.cs                      # ESAPI entry point (creates main window)
-├── Validators.cs                  # Validation engine (composite pattern)
+├── ValidationResult.cs            # Validation result classes and enums
+├── ValidatorBase.cs               # Base validator classes (Composite pattern)
+├── RootValidator.cs               # Root validator (entry point)
+├── ClinicalGoalsValidator.cs      # Clinical goals validation logic
+├── ValidationHelpers.cs           # Helper methods for validation
 ├── ValidationViewModel.cs         # MVVM view model
 ├── MainControl.xaml/.cs          # WPF UI
 ├── SeverityToColorConverter.cs   # UI color converter
@@ -41,21 +45,26 @@ ROcheck/
 
 ## Recent Progress
 
-- [x] v1.2.0: Target-OAR overlap detection fully working
-- [x] Fixed clinical goal detection with Unicode operators (≥, ≤, >, <)
-- [x] Optimized overlap algorithm (dose filter first, then spatial)
-- [x] Updated resolution thresholds (<5cc error, 5-10cc warning)
-- [x] Upgraded to Framework v2.1
+- [x] v1.4.0: Production release with code refactoring
+- [x] Refactored Validators.cs into 6 separate files for better maintainability
+- [x] Fixed ExtractTargetDose to use IsLowerGoal logic (consistent with overlap detection)
+- [x] Fixed GetTargetSuffix to handle structures without underscores
+- [x] Updated excluded structures: added Sternum, Implant*, Lymph*, LN_*
+- [x] Added IsValid property to ValidationResult
+- [x] Removed Test_ prefix, ready for production
+- [x] v1.3.0: SIB dose unit validation
+- [x] v1.2.0: Target-OAR overlap detection
 
 ## Active Work
 
-- Currently in production use
-- No active development tasks
+- Ready for production deployment
+- All refactoring complete and tested
 
 ## Next Steps
 
-- Monitor for user feedback
-- Consider additional validation rules (see ROADMAP.md)
+- Deploy to Eclipse plugins directory
+- Monitor production usage
+- Gather user feedback
 
 ## Key Concepts
 
@@ -65,6 +74,7 @@ ROcheck/
 - PTV-OAR Overlap: Conflicting dose constraints
 - Target Resolution: High-res for small PTVs
 - Structure Types: Proper PTV/CTV/GTV labeling
+- SIB Dose Units: Gy units required in SIB plans (NEW in v1.3.0)
 
 **Prescription-Aware Validation:**
 - Only targets IN prescription are validated for clinical goals

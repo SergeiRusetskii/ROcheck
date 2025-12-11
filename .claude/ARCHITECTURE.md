@@ -18,13 +18,17 @@ ROcheck is a focused quality assurance tool for Varian Eclipse treatment plannin
 ```
 ROcheck/
 ├── Script.cs                      # ESAPI plugin entry point
-├── Validators.cs                  # Validation engine (composite pattern)
+├── ValidationResult.cs            # Validation result classes and enums
+├── ValidatorBase.cs               # Base validator classes (Composite pattern)
+├── RootValidator.cs               # Root validator (entry point)
+├── ClinicalGoalsValidator.cs      # Clinical goals validation logic
+├── ValidationHelpers.cs           # Helper methods for validation
 ├── ValidationViewModel.cs         # MVVM view model
 ├── MainControl.xaml               # WPF UI markup
 ├── MainControl.xaml.cs            # WPF UI code-behind
 ├── SeverityToColorConverter.cs   # UI color converter
 ├── Properties/
-│   └── AssemblyInfo.cs           # Version: v1.2.0
+│   └── AssemblyInfo.cs           # Version: v1.4.0
 ├── ROcheck.csproj                # Project file (x64, .NET 4.8)
 ├── ROcheck.sln                   # Solution file
 └── .claude/                      # Framework files
@@ -39,15 +43,46 @@ ROcheck/
 - Initializes validation system via ValidationViewModel
 - Validates that course and plan are loaded before executing
 - Requires namespace `VMS.TPS` for ESAPI entry point
-- Window title: "ROcheck v1.2.0"
+- Window title: "ROcheck v1.4.0"
 
-### Validators.cs
-**Location:** `/Validators.cs`
-**Purpose:** Validation engine with composite pattern architecture
+### ValidationResult.cs
+**Location:** `/ValidationResult.cs`
+**Purpose:** Core validation data structures
+- `ValidationSeverity`: Enum (Error, Warning, Info)
+- `ValidationResult`: Class with Category, Message, Severity, IsFieldResult properties
+
+### ValidatorBase.cs
+**Location:** `/ValidatorBase.cs`
+**Purpose:** Base classes for validation system
 - `ValidatorBase`: Abstract base class for all validators
-- `CompositeValidator`: Base for validators that contain child validators
-- `RootValidator`: Main validator orchestrating all checks
-- `ClinicalGoalsValidator`: Core validator for structure setup and clinical goal validation
+- `CompositeValidator`: Base for validators that contain child validators (Composite pattern)
+
+### RootValidator.cs
+**Location:** `/RootValidator.cs`
+**Purpose:** Entry point for validation system
+- Orchestrates all validation checks
+- Contains `ClinicalGoalsValidator` as child
+
+### ClinicalGoalsValidator.cs
+**Location:** `/ClinicalGoalsValidator.cs`
+**Purpose:** Core validator for structure setup and clinical goal validation
+- Structure Coverage validation
+- Target Containment validation
+- PTV-OAR Overlap detection
+- Target Resolution validation
+- Structure Type validation
+- SIB Dose Units validation
+
+### ValidationHelpers.cs
+**Location:** `/ValidationHelpers.cs`
+**Purpose:** Static helper methods for validation operations
+- Clinical goals retrieval (cross-version compatible)
+- Structure goal lookup building
+- Dose extraction and parsing
+- Goal type detection (lower goals, Dmax goals)
+- Prescription target extraction
+- SIB detection helpers
+- Percentage dose detection
 
 ### ValidationViewModel.cs
 **Location:** `/ValidationViewModel.cs`
@@ -55,7 +90,6 @@ ROcheck/
 - Executes validation using `RootValidator`
 - Exposes `ObservableCollection<ValidationResult>` for UI binding
 - Result post-processing: collapses multiple passing field results into summary messages
-- Defines `ValidationResult` class with Category, Message, Severity, IsFieldResult properties
 
 ### MainControl.xaml/.cs
 **Location:** `/MainControl.xaml` and `/MainControl.xaml.cs`
@@ -88,7 +122,8 @@ RootValidator
     ├── Target Containment validation
     ├── PTV-OAR Overlap detection
     ├── Target Resolution validation
-    └── Structure Type validation
+    ├── Structure Type validation
+    └── SIB Dose Units validation
 ```
 
 ### Validation Flow
@@ -117,7 +152,8 @@ MainControl.xaml (display)
 - Prescription-aware: GTV/CTV/PTV in dose prescription are validated
 - Non-prescription targets automatically excluded
 - Excludes SUPPORT structures, structures with 'wire', 'Encompass', 'Enc', 'Dose'
-- Excludes: 'Bones', 'CouchInterior', 'CouchSurface', 'Clips', 'Scar_Wire'
+- Excludes structures starting with: 'z_', 'Implant', 'Lymph', 'LN_'
+- Excludes: 'Bones', 'CouchInterior', 'CouchSurface', 'Clips', 'Scar_Wire', 'Sternum'
 
 ### 2. Target Containment (ClinicalGoals.TargetContainment)
 **Purpose:** Flag GTV/CTV volumes extending beyond paired PTVs
@@ -139,6 +175,21 @@ MainControl.xaml (display)
 
 ### 5. Structure Types (ClinicalGoals.StructureTypes)
 **Purpose:** Validate PTV/CTV/GTV proper labeling
+
+### 6. SIB Dose Units (ClinicalGoals.SIB)
+**Purpose:** Validate dose units in SIB (Simultaneously Integrated Boost) plans
+**Algorithm:**
+1. SIB Detection: Compare target clinical goal doses, if >6% difference → SIB
+2. Dose Unit Validation: In SIB plans, ALL clinical goals (targets + OARs) must use Gy
+3. Percentage detection: Regex pattern `@"[<>≤≥]\s*\d+\.?\d*\s*%"` with volume constraint exclusion
+4. Reports Error for percentage dose units in SIB plans
+
+**Important Notes:**
+- Uses clinical goals ONLY for SIB detection
+- RTPrescription not accessible at script launch (documented limitation)
+- D95% goals prioritized for target dose comparison
+- Volume percentage constraints (V X Gy ≥ Y%) are allowed
+- Silent pass: No messages unless Error found
 
 ## External Dependencies
 
@@ -162,7 +213,9 @@ MainControl.xaml (display)
 - Eclipse Scripting API v18.0+
 
 **Build:**
+**IMPORTANT:** User builds manually - do NOT run build commands via Bash tool.
 ```bash
+# User will execute manually:
 msbuild ROcheck.sln /p:Configuration=Release /p:Platform=x64
 ```
 

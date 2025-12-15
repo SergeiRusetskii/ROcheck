@@ -36,6 +36,29 @@
 ## Completed
 
 ### Recently Completed
+- [x] Enhanced SIB validator with percentage dose unit checking (2025-12-15)
+  - SIBDoseUnitsValidator now detects percentage units in clinical goals
+  - Uses HasPercentageDose helper method for comprehensive checking
+  - Validates all clinical goals (targets + OARs) when SIB detected
+  - Updated documentation with detailed feature descriptions
+- [x] Updated to v1.6.0 - Removed TEST_ prefix for production release (2025-12-15)
+  - Changed window title to "ROcheck v1.6.0"
+  - Changed assembly name to "ROcheck.esapi"
+  - Updated version in AssemblyInfo.cs to 1.6.0.0
+  - Updated documentation (SNAPSHOT.md)
+- [x] Updated to v1.5.0 with TEST_ prefix (2025-12-12)
+  - Changed window title to "TEST_ROcheck v1.5.0"
+  - Changed assembly name to "TEST_ROcheck.esapi"
+  - Updated version in AssemblyInfo.cs to 1.5.0.0
+  - Updated documentation
+- [x] Refactored validators into separate files organized in Validators/ folder (2025-12-12)
+  - Split ClinicalGoalsValidator into 6 focused validators
+  - Created Validators/ folder for better code organization
+  - Updated namespaces to ROcheck.Validators
+  - Moved spatial helpers to ValidationHelpers.cs
+  - Updated all documentation (SNAPSHOT, ARCHITECTURE, CLAUDE.md)
+- [x] Added PTV to Body surface proximity validator (2025-12-12)
+- [x] Updated CLAUDE.md with framework usage policy (2025-12-12)
 - [x] Initialized Claude Code Starter Framework (2025-12-10)
 - [x] Upgraded to Framework v2.1 (2025-12-10)
 

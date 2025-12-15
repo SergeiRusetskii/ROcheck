@@ -1,7 +1,7 @@
 # SNAPSHOT — ROcheck
 
 *Framework: Claude Code Starter v2.1*
-*Last updated: 2025-12-11*
+*Last updated: 2025-12-15*
 
 > **Planning Documents:**
 > - 🎯 Current tasks: [BACKLOG.md](./BACKLOG.md)
@@ -11,8 +11,8 @@
 
 ## Current State
 
-**Version:** v1.4.0
-**Status:** Production - Refactored and ready for deployment
+**Version:** v1.6.0
+**Status:** Production - Validators refactored, ready for deployment
 **Branch:** master
 
 ## Project Overview
@@ -31,22 +31,32 @@
 
 ```
 ROcheck/
-├── Script.cs                      # ESAPI entry point (creates main window)
-├── ValidationResult.cs            # Validation result classes and enums
-├── ValidatorBase.cs               # Base validator classes (Composite pattern)
-├── RootValidator.cs               # Root validator (entry point)
-├── ClinicalGoalsValidator.cs      # Clinical goals validation logic
-├── ValidationHelpers.cs           # Helper methods for validation
-├── ValidationViewModel.cs         # MVVM view model
-├── MainControl.xaml/.cs          # WPF UI
-├── SeverityToColorConverter.cs   # UI color converter
-└── Properties/AssemblyInfo.cs    # Version info
+├── Validators/                                      # Validation logic (organized by concern)
+│   ├── ValidatorBase.cs                            # Base validator classes (Composite pattern)
+│   ├── ClinicalGoalsCoverageValidator.cs           # Clinical goal presence validation
+│   ├── TargetContainmentValidator.cs               # GTV/CTV containment within PTV
+│   ├── TargetOAROverlapValidator.cs                # Target-OAR dose conflict detection
+│   ├── PTVBodyProximityValidator.cs                # PTV to Body surface proximity
+│   ├── TargetResolutionValidator.cs                # Small volume high-res validation
+│   ├── StructureTypesValidator.cs                  # DICOM type validation
+│   └── SIBDoseUnitsValidator.cs                    # SIB dose unit validation
+├── Script.cs                                        # ESAPI entry point (creates main window)
+├── ValidationResult.cs                              # Validation result classes and enums
+├── RootValidator.cs                                 # Root validator (orchestrates all validators)
+├── ValidationHelpers.cs                             # Helper methods and spatial algorithms
+├── ValidationViewModel.cs                           # MVVM view model
+├── MainControl.xaml/.cs                            # WPF UI
+├── SeverityToColorConverter.cs                     # UI color converter
+└── Properties/AssemblyInfo.cs                      # Version info
 ```
 
 ## Recent Progress
 
+- [x] v1.5.0: Major refactoring - organized validators into separate files
+- [x] Split ClinicalGoalsValidator into 6 focused validators
+- [x] Created Validators/ folder with 7 total validators
+- [x] Added TEST_ prefix to script name
 - [x] v1.4.0: Production release with code refactoring
-- [x] Refactored Validators.cs into 6 separate files for better maintainability
 - [x] Fixed ExtractTargetDose to use IsLowerGoal logic (consistent with overlap detection)
 - [x] Fixed GetTargetSuffix to handle structures without underscores
 - [x] Updated excluded structures: added Sternum, Implant*, Lymph*, LN_*
@@ -74,7 +84,8 @@ ROcheck/
 - PTV-OAR Overlap: Conflicting dose constraints
 - Target Resolution: High-res for small PTVs
 - Structure Types: Proper PTV/CTV/GTV labeling
-- SIB Dose Units: Gy units required in SIB plans (NEW in v1.3.0)
+- SIB Dose Units: Detects SIB plans (>6% dose difference) and validates Gy-only units (no percentages)
+- PTV-Body Proximity: Distance from PTV to Body surface (4mm threshold)
 
 **Prescription-Aware Validation:**
 - Only targets IN prescription are validated for clinical goals

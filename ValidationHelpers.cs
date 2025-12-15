@@ -446,5 +446,138 @@ namespace ROcheck
 
             return true; // Found dose in percentage
         }
+
+        /// <summary>
+        /// Checks if one structure is fully contained within another structure using voxel-based sampling.
+        /// Samples points within the inner structure and verifies all are inside the outer structure.
+        /// </summary>
+        /// <param name="inner">The structure that should be contained</param>
+        /// <param name="outer">The structure that should contain the inner structure</param>
+        /// <param name="image">The image for coordinate system and sampling resolution</param>
+        /// <returns>True if inner is fully contained within outer, false if any voxel extends outside</returns>
+        public static bool IsStructureContained(Structure inner, Structure outer, Image image)
+        {
+            if (inner == null || outer == null || inner.IsEmpty || outer.IsEmpty)
+                return true;
+
+            if (image == null)
+                return true;
+
+            int sampleStep = Math.Max(1, image.XSize / 120);
+            int zStep = Math.Max(1, image.ZSize / 60);
+            var origin = image.Origin;
+            var buffer = new int[image.XSize, image.YSize];
+
+            for (int z = 0; z < image.ZSize; z += zStep)
+            {
+                image.GetVoxels(z, buffer);
+
+                if (!inner.GetContoursOnImagePlane(z).Any())
+                    continue;
+
+                double zPos = origin.z + z * image.ZRes;
+                for (int x = 0; x < image.XSize; x += sampleStep)
+                {
+                    double xPos = origin.x + x * image.XRes;
+                    for (int y = 0; y < image.YSize; y += sampleStep)
+                    {
+                        double yPos = origin.y + y * image.YRes;
+                        var point = new VVector(xPos, yPos, zPos);
+                        if (inner.IsPointInsideSegment(point) && !outer.IsPointInsideSegment(point))
+                            return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if two structures spatially overlap using voxel-based sampling.
+        /// Samples points and looks for any voxel that is inside both structures simultaneously.
+        /// </summary>
+        /// <param name="a">First structure</param>
+        /// <param name="b">Second structure</param>
+        /// <param name="image">The image for coordinate system and sampling resolution</param>
+        /// <returns>True if structures overlap, false otherwise</returns>
+        public static bool StructuresOverlap(Structure a, Structure b, Image image)
+        {
+            if (a == null || b == null || a.IsEmpty || b.IsEmpty)
+                return false;
+
+            if (image == null)
+                return false;
+
+            int sampleStep = Math.Max(1, image.XSize / 120);
+            int zStep = Math.Max(1, image.ZSize / 60);
+            var origin = image.Origin;
+            var buffer = new int[image.XSize, image.YSize];
+
+            for (int z = 0; z < image.ZSize; z += zStep)
+            {
+                image.GetVoxels(z, buffer);
+
+                if (!a.GetContoursOnImagePlane(z).Any() || !b.GetContoursOnImagePlane(z).Any())
+                    continue;
+
+                double zPos = origin.z + z * image.ZRes;
+                for (int x = 0; x < image.XSize; x += sampleStep)
+                {
+                    double xPos = origin.x + x * image.XRes;
+                    for (int y = 0; y < image.YSize; y += sampleStep)
+                    {
+                        double yPos = origin.y + y * image.YRes;
+                        var point = new VVector(xPos, yPos, zPos);
+                        if (a.IsPointInsideSegment(point) && b.IsPointInsideSegment(point))
+                            return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Determines if a structure should be excluded from clinical goal validation.
+        /// Implements prescription-aware exclusion logic for target structures.
+        ///
+        /// Exclusion rules:
+        /// 1. SUPPORT structures (DICOM type = SUPPORT)
+        /// 2. Structures with specific patterns: z_*, *wire*, *Encompass*, *Enc Marker*, *Dose*, Implant*, Lymph*, LN_*
+        /// 3. Structures in ExcludedStructures list (Bones, CouchInterior, Clips, Scar_Wire, Sternum)
+        /// 4. GTV/CTV/PTV structures NOT in the dose prescription (evaluation/backup targets)
+        /// </summary>
+        public static bool IsStructureExcluded(Structure structure, HashSet<string> prescriptionTargetIds, HashSet<string> excludedStructures)
+        {
+            // Exclude structures with DICOM type 'SUPPORT'
+            if (string.Equals(structure.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // Exclude structures with certain patterns in their names
+            if (structure.Id.StartsWith("z_", StringComparison.OrdinalIgnoreCase) ||
+                structure.Id.StartsWith("Implant", StringComparison.OrdinalIgnoreCase) ||
+                structure.Id.StartsWith("Lymph", StringComparison.OrdinalIgnoreCase) ||
+                structure.Id.StartsWith("LN_", StringComparison.OrdinalIgnoreCase) ||
+                structure.Id.IndexOf("wire", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                structure.Id.IndexOf("Encompass", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                structure.Id.IndexOf("Enc Marker", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                structure.Id.IndexOf("Dose", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            // Prescription-aware exclusion for target volumes (GTV/CTV/PTV)
+            // Only validate targets that are actually in the prescription
+            if (structure.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase) ||
+                structure.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase) ||
+                structure.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase))
+            {
+                // Exclude if NOT in prescription (evaluation or backup structures)
+                return !prescriptionTargetIds.Contains(structure.Id);
+            }
+
+            // Check against explicit exclusion list
+            return excludedStructures.Contains(structure.Id);
+        }
     }
 }

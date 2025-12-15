@@ -17,21 +17,30 @@ ROcheck is a focused quality assurance tool for Varian Eclipse treatment plannin
 
 ```
 ROcheck/
-├── Script.cs                      # ESAPI plugin entry point
-├── ValidationResult.cs            # Validation result classes and enums
-├── ValidatorBase.cs               # Base validator classes (Composite pattern)
-├── RootValidator.cs               # Root validator (entry point)
-├── ClinicalGoalsValidator.cs      # Clinical goals validation logic
-├── ValidationHelpers.cs           # Helper methods for validation
-├── ValidationViewModel.cs         # MVVM view model
-├── MainControl.xaml               # WPF UI markup
-├── MainControl.xaml.cs            # WPF UI code-behind
-├── SeverityToColorConverter.cs   # UI color converter
+├── Validators/                                      # Validation logic (organized by concern)
+│   ├── ValidatorBase.cs                            # Base validator classes (Composite pattern)
+│   ├── ClinicalGoalsCoverageValidator.cs           # Clinical goal presence validation
+│   ├── TargetContainmentValidator.cs               # GTV/CTV containment within PTV
+│   ├── TargetOAROverlapValidator.cs                # Target-OAR dose conflict detection
+│   ├── PTVBodyProximityValidator.cs                # PTV to Body surface proximity
+│   ├── TargetResolutionValidator.cs                # Small volume high-res validation
+│   ├── StructureTypesValidator.cs                  # DICOM type validation
+│   └── SIBDoseUnitsValidator.cs                    # SIB dose unit validation
+├── Script.cs                                        # ESAPI plugin entry point
+├── ValidationResult.cs                              # Validation result classes and enums
+├── RootValidator.cs                                 # Root validator (orchestrates all validators)
+├── ValidationHelpers.cs                             # Helper methods and spatial algorithms
+├── ValidationViewModel.cs                           # MVVM view model
+├── MainControl.xaml                                 # WPF UI markup
+├── MainControl.xaml.cs                             # WPF UI code-behind
+├── SeverityToColorConverter.cs                     # UI color converter
 ├── Properties/
-│   └── AssemblyInfo.cs           # Version: v1.4.0
-├── ROcheck.csproj                # Project file (x64, .NET 4.8)
-├── ROcheck.sln                   # Solution file
-└── .claude/                      # Framework files
+│   └── AssemblyInfo.cs                             # Version: v1.6.0
+├── Examples/                                        # Example validators and patterns
+├── Documentation/                                   # ESAPI XML and PDF documentation
+├── ROcheck.csproj                                  # Project file (x64, .NET 4.8)
+├── ROcheck.sln                                     # Solution file
+└── .claude/                                        # Framework files
 ```
 
 ## Key Components
@@ -43,7 +52,8 @@ ROcheck/
 - Initializes validation system via ValidationViewModel
 - Validates that course and plan are loaded before executing
 - Requires namespace `VMS.TPS` for ESAPI entry point
-- Window title: "ROcheck v1.4.0"
+- Window title: "ROcheck v1.6.0"
+- Assembly name: "ROcheck.esapi"
 
 ### ValidationResult.cs
 **Location:** `/ValidationResult.cs`
@@ -51,38 +61,63 @@ ROcheck/
 - `ValidationSeverity`: Enum (Error, Warning, Info)
 - `ValidationResult`: Class with Category, Message, Severity, IsFieldResult properties
 
-### ValidatorBase.cs
-**Location:** `/ValidatorBase.cs`
+### Validators/ValidatorBase.cs
+**Location:** `/Validators/ValidatorBase.cs`
+**Namespace:** `ROcheck.Validators`
 **Purpose:** Base classes for validation system
 - `ValidatorBase`: Abstract base class for all validators
 - `CompositeValidator`: Base for validators that contain child validators (Composite pattern)
 
 ### RootValidator.cs
 **Location:** `/RootValidator.cs`
+**Namespace:** `ROcheck`
 **Purpose:** Entry point for validation system
-- Orchestrates all validation checks
-- Contains `ClinicalGoalsValidator` as child
+- Orchestrates all 7 specialized validators
+- Organizes validators by category (clinical goals, geometry, properties, dose)
 
-### ClinicalGoalsValidator.cs
-**Location:** `/ClinicalGoalsValidator.cs`
-**Purpose:** Core validator for structure setup and clinical goal validation
-- Structure Coverage validation
-- Target Containment validation
-- PTV-OAR Overlap detection
-- Target Resolution validation
-- Structure Type validation
-- SIB Dose Units validation
+### Specialized Validators (Validators/ folder)
+**Namespace:** `ROcheck.Validators`
+
+#### ClinicalGoalsCoverageValidator.cs
+- Validates that all applicable structures have at least one clinical goal
+- Uses prescription-aware filtering
+
+#### TargetContainmentValidator.cs
+- Validates GTV/CTV volumes are fully contained within their PTV
+- Voxel-based spatial containment detection
+
+#### TargetOAROverlapValidator.cs
+- Detects target-OAR dose conflicts with spatial overlap
+- Warns when PTV lower goals exceed OAR Dmax constraints
+
+#### PTVBodyProximityValidator.cs
+- Checks minimum distance from PTV to BODY surface
+- Warns if distance ≤4mm, suggests EVAL structures
+
+#### TargetResolutionValidator.cs
+- Validates small PTVs (<10cc) use high-resolution contouring
+- Error for <5cc, Warning for 5-10cc
+
+#### StructureTypesValidator.cs
+- Validates DICOM structure types match naming (PTV→PTV, CTV→CTV, GTV→GTV)
+
+#### SIBDoseUnitsValidator.cs
+- Detects SIB plans (>6% dose difference between targets)
+- Ensures all goals use Gy units (no percentages)
 
 ### ValidationHelpers.cs
 **Location:** `/ValidationHelpers.cs`
+**Namespace:** `ROcheck`
 **Purpose:** Static helper methods for validation operations
-- Clinical goals retrieval (cross-version compatible)
+- Clinical goals retrieval (cross-version compatible via reflection)
 - Structure goal lookup building
 - Dose extraction and parsing
 - Goal type detection (lower goals, Dmax goals)
 - Prescription target extraction
 - SIB detection helpers
 - Percentage dose detection
+- Spatial algorithms (IsStructureContained, StructuresOverlap)
+- Structure exclusion logic
 
 ### ValidationViewModel.cs
 **Location:** `/ValidationViewModel.cs`

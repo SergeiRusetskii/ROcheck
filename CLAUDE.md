@@ -138,6 +138,29 @@ echo '{"status": "clean", "timestamp": "'$(date -Iseconds)'"}' > .claude/.last_s
 3. **Local Processing** — no external APIs
 4. **Token Economy** — minimal context loading
 
+## Framework Tools Usage Policy
+
+**MANDATORY: Use Task tool with Explore agent for:**
+- Exploring codebase structure and architecture
+- Understanding how systems work (e.g., "how are validators registered?")
+- Finding related files and patterns
+- Answering questions requiring multiple file searches
+- Any non-trivial search operations
+
+**DO NOT:**
+- Run Glob/Grep/Read directly for exploratory tasks
+- Search manually when exploring unfamiliar code
+- Skip the framework for "quick searches" — they're rarely quick
+
+**Example:**
+```
+❌ BAD: User asks "how are validators registered?"
+→ Agent runs Glob *.cs, Grep "validator", Read multiple files
+
+✅ GOOD: User asks "how are validators registered?"
+→ Agent uses Task tool with Explore agent
+```
+
 ## Warnings
 
 - DO NOT skip Crash Recovery check

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using VMS.TPS.Common.Model.API;
 
-namespace ROcheck
+namespace ROcheck.Validators
 {
     /// <summary>
     /// Base validator class for all validators in the system.

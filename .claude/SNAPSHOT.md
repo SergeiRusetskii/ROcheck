@@ -11,8 +11,8 @@
 
 ## Current State
 
-**Version:** v1.5.1
-**Status:** Testing - Enhanced prescription filtering with reviewed status check
+**Version:** v1.5.2
+**Status:** Testing - Prescription debugging added to diagnose extraction issues
 **Branch:** master
 
 ## Project Overview
@@ -52,6 +52,9 @@ ROcheck/
 
 ## Recent Progress
 
+- [x] v1.5.2: Added comprehensive prescription debugging output
+- [x] Changed category name from "Structure Coverage" to "Clinical Goals existence"
+- [x] Fixed TEST_ prefix in ROcheck.csproj
 - [x] v1.5.1: Enhanced prescription filtering to check "Reviewed" status
 - [x] Added informational message when no reviewed prescriptions found
 - [x] v1.5.0: Major refactoring - organized validators into separate files

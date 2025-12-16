@@ -32,7 +32,7 @@ namespace VMS.TPS
             };
 
             window.Content = mainControl;
-            window.Title = "TEST_ROcheck v1.5.1";
+            window.Title = "TEST_ROcheck v1.5.2";
             window.Width = 650;
             window.Height = 1000;
         }

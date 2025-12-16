@@ -36,6 +36,12 @@
 ## Completed
 
 ### Recently Completed
+- [x] Update to v1.5.2 - Added prescription debugging (2025-12-16)
+  - Added comprehensive DEBUG output showing all prescription properties
+  - Changed section name to "Clinical Goals existence"
+  - Fixed TEST_ prefix in ROcheck.csproj
+  - Added Version Increment Policy to CLAUDE.md
+  - Eclipse caching policy: increment patch version after each testing feedback
 - [x] Enhanced prescription filtering with "Reviewed" status check (2025-12-16)
   - Updated GetReviewedPrescriptionTargetIds to filter by prescription status
   - Added hasReviewedPrescriptions flag to track if reviewed prescriptions exist

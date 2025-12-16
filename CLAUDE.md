@@ -28,6 +28,27 @@ When user requests to add or remove TEST_ prefix, update ALL THREE locations:
 
 **CRITICAL:** All three files must be updated together. Missing the .csproj file means the build will use the wrong assembly name.
 
+**Version Increment Policy:**
+
+**IMPORTANT:** Eclipse caches scripts by version number and will NOT reload a modified script if the version stays the same.
+
+When user provides feedback from real Eclipse script testing (NOT build errors), increment the PATCH version in ALL THREE locations:
+
+1. **ROcheck.csproj** (line 11): `<AssemblyName>TEST_ROcheck.esapi</AssemblyName>` - no version here
+2. **Properties/AssemblyInfo.cs** (lines 36-37):
+   ```
+   [assembly: AssemblyVersion("1.5.X.0")]
+   [assembly: AssemblyFileVersion("1.5.X.0")]
+   ```
+3. **Script.cs** (line ~35): `window.Title = "TEST_ROcheck v1.5.X";`
+
+**Version increment rules:**
+- Patch version (1.5.1 → 1.5.2): After each real Eclipse testing feedback
+- Minor version (1.5.X → 1.6.0): New features or significant changes
+- Major version (1.X.X → 2.0.0): Major refactoring or breaking changes
+
+**Example:** User tests v1.5.1 in Eclipse and reports an issue → Update to v1.5.2 before making fixes.
+
 ## Triggers
 
 **"start", "начать":**

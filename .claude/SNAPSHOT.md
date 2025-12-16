@@ -1,7 +1,7 @@
 # SNAPSHOT — ROcheck
 
 *Framework: Claude Code Starter v2.1*
-*Last updated: 2025-12-15*
+*Last updated: 2025-12-16*
 
 > **Planning Documents:**
 > - 🎯 Current tasks: [BACKLOG.md](./BACKLOG.md)
@@ -57,6 +57,9 @@ ROcheck/
 - [x] Works with both linked and non-linked prescriptions
 - [x] Removed TEST_ prefix - production ready
 - [x] Removed all debug code
+- [x] Created comprehensive README for public repository
+- [x] Implemented Community License (free internal use, prohibited resale)
+- [x] Fixed emoji encoding issues in README (UTF-8 BOM)
 - [x] v1.5.4: Fixed prescription access to use TreatmentPhases
 - [x] v1.5.3: Replaced reflection with documented ESAPI
 - [x] Use PlanSetup.GetClinicalGoals() for clinical goals
@@ -82,15 +85,17 @@ ROcheck/
 
 ## Active Work
 
-- Production ready v1.6.0
-- All features working with documented ESAPI
-- Prescription filtering fully functional
+- ✅ v1.6.0 completed and pushed to GitHub
+- ✅ Repository public-ready with comprehensive documentation
+- ✅ Community License implemented
+- ✅ Zero reflection - 100% documented ESAPI
 
 ## Next Steps
 
 - Deploy to Eclipse plugins directory
 - Monitor production usage
 - Gather user feedback for future enhancements
+- Consider making repository public
 
 ## Key Concepts
 

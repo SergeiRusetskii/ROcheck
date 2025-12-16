@@ -35,6 +35,9 @@ namespace ROcheck.Validators
             // Extract target structure IDs from prescription for smart target filtering
             var prescriptionTargetIds = ValidationHelpers.GetReviewedPrescriptionTargetIds(plan, out bool hasReviewedPrescriptions);
 
+            // DEBUG: Output prescription information
+            DebugPrescriptions(plan, results);
+
             ValidateClinicalGoalPresence(structureSet.Structures, structureGoals, prescriptionTargetIds, hasReviewedPrescriptions, results);
 
             return results;
@@ -61,7 +64,7 @@ namespace ROcheck.Validators
                 if (!structureGoals.ContainsKey(structure.Id))
                 {
                     results.Add(CreateResult(
-                        "Structure Coverage",
+                        "Clinical Goals existence",
                         $"Structure '{structure.Id}' has no associated clinical goal.",
                     ValidationSeverity.Warning));
                 }
@@ -71,7 +74,7 @@ namespace ROcheck.Validators
             if (!hasReviewedPrescriptions)
             {
                 results.Add(CreateResult(
-                    "Structure Coverage",
+                    "Clinical Goals existence",
                     "No 'Reviewed' prescriptions found; all target structures were skipped.",
                     ValidationSeverity.Info));
             }
@@ -80,17 +83,140 @@ namespace ROcheck.Validators
             if (results.Count == initialCount && checkedCount > 0)
             {
                 results.Add(CreateResult(
-                    "Structure Coverage",
+                    "Clinical Goals existence",
                     $"All {checkedCount} applicable structures have associated clinical goals.",
                     ValidationSeverity.Info));
             }
             else if (checkedCount == 0)
             {
                 results.Add(CreateResult(
-                    "Structure Coverage",
-                    $"No structures found requiring clinical goals (all are excluded or targets).",
+                    "Clinical Goals existence",
+                    $"No structures found requiring clinical goals (all are excluded).",
                     ValidationSeverity.Info));
             }
+        }
+
+        private void DebugPrescriptions(PlanSetup plan, List<ValidationResult> results)
+        {
+            var course = plan?.Course;
+            if (course == null)
+            {
+                results.Add(CreateResult(
+                    "Clinical Goals existence",
+                    "DEBUG: Course is null",
+                    ValidationSeverity.Info));
+                return;
+            }
+
+            results.Add(CreateResult(
+                "Clinical Goals existence",
+                $"DEBUG: Course = {course.Id}",
+                ValidationSeverity.Info));
+
+            // Try to get prescriptions using reflection
+            int prescriptionCount = 0;
+            var prescriptionsList = new System.Text.StringBuilder();
+
+            // Try RTPrescriptions property
+            var rtPrescriptionsProperty = course.GetType().GetProperty("RTPrescriptions");
+            if (rtPrescriptionsProperty != null)
+            {
+                prescriptionsList.AppendLine("DEBUG: Found RTPrescriptions property");
+                var rxCollection = rtPrescriptionsProperty.GetValue(course);
+                if (rxCollection is System.Collections.IEnumerable enumerable)
+                {
+                    foreach (var rx in enumerable)
+                    {
+                        prescriptionCount++;
+                        var rxInfo = GetPrescriptionDebugInfo(rx, prescriptionCount);
+                        prescriptionsList.AppendLine(rxInfo);
+                    }
+                }
+                else
+                {
+                    prescriptionsList.AppendLine("DEBUG: RTPrescriptions value is not enumerable");
+                }
+            }
+            else
+            {
+                prescriptionsList.AppendLine("DEBUG: RTPrescriptions property NOT found");
+            }
+
+            // Try Prescriptions property
+            var prescriptionsProperty = course.GetType().GetProperty("Prescriptions");
+            if (prescriptionsProperty != null)
+            {
+                prescriptionsList.AppendLine("DEBUG: Found Prescriptions property");
+                var rxCollection = prescriptionsProperty.GetValue(course);
+                if (rxCollection is System.Collections.IEnumerable enumerable)
+                {
+                    foreach (var rx in enumerable)
+                    {
+                        prescriptionCount++;
+                        var rxInfo = GetPrescriptionDebugInfo(rx, prescriptionCount);
+                        prescriptionsList.AppendLine(rxInfo);
+                    }
+                }
+                else
+                {
+                    prescriptionsList.AppendLine("DEBUG: Prescriptions value is not enumerable");
+                }
+            }
+            else
+            {
+                prescriptionsList.AppendLine("DEBUG: Prescriptions property NOT found");
+            }
+
+            results.Add(CreateResult(
+                "Clinical Goals existence",
+                $"DEBUG: Total prescriptions found: {prescriptionCount}\n{prescriptionsList}",
+                ValidationSeverity.Info));
+        }
+
+        private string GetPrescriptionDebugInfo(object prescription, int index)
+        {
+            if (prescription == null)
+                return $"Rx #{index}: NULL";
+
+            var info = new System.Text.StringBuilder();
+            info.AppendLine($"Rx #{index}:");
+
+            var type = prescription.GetType();
+            info.AppendLine($"  Type: {type.FullName}");
+
+            // Get all properties
+            var properties = type.GetProperties();
+            foreach (var prop in properties)
+            {
+                try
+                {
+                    var value = prop.GetValue(prescription);
+
+                    // Special handling for Targets collection
+                    if (prop.Name == "Targets" && value is System.Collections.IEnumerable targets)
+                    {
+                        var targetsList = new System.Text.StringBuilder();
+                        int targetCount = 0;
+                        foreach (var target in targets)
+                        {
+                            targetCount++;
+                            var targetId = ValidationHelpers.GetPropertyValue(target, "TargetId");
+                            targetsList.Append($"{targetId}, ");
+                        }
+                        info.AppendLine($"  {prop.Name} ({targetCount}): {targetsList}");
+                    }
+                    else
+                    {
+                        info.AppendLine($"  {prop.Name} = {value ?? "NULL"}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    info.AppendLine($"  {prop.Name} = ERROR: {ex.Message}");
+                }
+            }
+
+            return info.ToString();
         }
     }
 }

@@ -282,51 +282,62 @@ namespace ROcheck
         }
 
         /// <summary>
-        /// Extracts target structure IDs from the plan's linked prescription (if reviewed).
-        /// Uses documented ESAPI: PlanSetup.RTPrescription property.
-        /// Reference: VMS.TPS.Common.Model.API.xml - P:VMS.TPS.Common.Model.API.PlanSetup.RTPrescription
+        /// Extracts target structure IDs from ALL reviewed prescriptions in the course.
+        /// Uses documented ESAPI path: Course → TreatmentPhases → Prescriptions
+        /// Reference: VMS.TPS.Common.Model.API.xml - P:VMS.TPS.Common.Model.API.Course.TreatmentPhases
+        /// Reference: VMS.TPS.Common.Model.API.xml - P:VMS.TPS.Common.Model.API.TreatmentPhase.Prescriptions
         /// Reference: VMS.TPS.Common.Model.API.xml - T:VMS.TPS.Common.Model.API.RTPrescription
         /// Reference: VMS.TPS.Common.Model.API.xml - T:VMS.TPS.Common.Model.API.RTPrescriptionTarget
         /// </summary>
-        /// <param name="plan">The plan setup containing prescription information</param>
-        /// <param name="hasReviewedPrescriptions">Returns true if a reviewed prescription was found</param>
+        /// <param name="plan">The plan setup containing course information</param>
+        /// <param name="hasReviewedPrescriptions">Returns true if any reviewed prescription was found</param>
         /// <returns>HashSet of structure IDs that are prescription targets</returns>
         public static HashSet<string> GetReviewedPrescriptionTargetIds(PlanSetup plan, out bool hasReviewedPrescriptions)
         {
             var targetIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             hasReviewedPrescriptions = false;
 
-            if (plan == null)
+            if (plan?.Course == null)
                 return targetIds;
 
             try
             {
-                // Use documented API: PlanSetup.RTPrescription property
-                // This is the prescription linked to this specific plan
-                var prescription = plan.RTPrescription;
-
-                if (prescription == null)
+                // Use documented API: Course.TreatmentPhases property
+                var treatmentPhases = plan.Course.TreatmentPhases;
+                if (treatmentPhases == null)
                     return targetIds;
 
-                // Check if prescription status is "Reviewed"
-                // Status property returns string or enum - convert to string for comparison
-                var status = prescription.Status?.ToString();
-                if (!string.Equals(status, "Reviewed", StringComparison.OrdinalIgnoreCase))
-                    return targetIds;
-
-                hasReviewedPrescriptions = true;
-
-                // Get targets from prescription using documented API
-                var targets = prescription.Targets;
-                if (targets != null)
+                // Iterate through all treatment phases in the course
+                foreach (var phase in treatmentPhases)
                 {
-                    foreach (var target in targets)
+                    // Use documented API: TreatmentPhase.Prescriptions property
+                    var prescriptions = phase.Prescriptions;
+                    if (prescriptions == null)
+                        continue;
+
+                    // Check each prescription in this phase
+                    foreach (var prescription in prescriptions)
                     {
-                        // Use documented API: RTPrescriptionTarget.TargetId property
-                        var targetId = target.TargetId;
-                        if (!string.IsNullOrEmpty(targetId))
+                        // Check if prescription status is "Reviewed"
+                        var status = prescription.Status?.ToString();
+                        if (!string.Equals(status, "Reviewed", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        hasReviewedPrescriptions = true;
+
+                        // Get targets from prescription using documented API
+                        var targets = prescription.Targets;
+                        if (targets != null)
                         {
-                            targetIds.Add(targetId);
+                            foreach (var target in targets)
+                            {
+                                // Use documented API: RTPrescriptionTarget.TargetId property
+                                var targetId = target.TargetId;
+                                if (!string.IsNullOrEmpty(targetId))
+                                {
+                                    targetIds.Add(targetId);
+                                }
+                            }
                         }
                     }
                 }

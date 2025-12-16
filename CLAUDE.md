@@ -10,6 +10,24 @@
 - NEVER execute msbuild or other build commands via Bash tool
 - Only suggest build commands if needed, but do not execute them
 
+**TEST_ Prefix Procedure:**
+
+When user requests to add or remove TEST_ prefix, update ALL THREE locations:
+
+1. **ROcheck.csproj** (line 11):
+   - Testing: `<AssemblyName>TEST_ROcheck.esapi</AssemblyName>`
+   - Production: `<AssemblyName>ROcheck.esapi</AssemblyName>`
+
+2. **Properties/AssemblyInfo.cs** (line 12):
+   - Testing: `[assembly: AssemblyProduct("TEST_ROcheck.esapi")]`
+   - Production: `[assembly: AssemblyProduct("ROcheck.esapi")]`
+
+3. **Script.cs** (line ~35):
+   - Testing: `window.Title = "TEST_ROcheck v1.X.X";`
+   - Production: `window.Title = "ROcheck v1.X.X";`
+
+**CRITICAL:** All three files must be updated together. Missing the .csproj file means the build will use the wrong assembly name.
+
 ## Triggers
 
 **"start", "начать":**

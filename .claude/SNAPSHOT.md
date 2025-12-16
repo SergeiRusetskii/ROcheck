@@ -11,8 +11,8 @@
 
 ## Current State
 
-**Version:** v1.6.0
-**Status:** Production - Validators refactored, ready for deployment
+**Version:** v1.5.1
+**Status:** Testing - Enhanced prescription filtering with reviewed status check
 **Branch:** master
 
 ## Project Overview
@@ -52,6 +52,8 @@ ROcheck/
 
 ## Recent Progress
 
+- [x] v1.5.1: Enhanced prescription filtering to check "Reviewed" status
+- [x] Added informational message when no reviewed prescriptions found
 - [x] v1.5.0: Major refactoring - organized validators into separate files
 - [x] Split ClinicalGoalsValidator into 6 focused validators
 - [x] Created Validators/ folder with 7 total validators
@@ -88,8 +90,9 @@ ROcheck/
 - PTV-Body Proximity: Distance from PTV to Body surface (4mm threshold)
 
 **Prescription-Aware Validation:**
-- Only targets IN prescription are validated for clinical goals
+- Only targets in "Reviewed" prescriptions are validated for clinical goals
 - Non-prescription targets automatically excluded
+- Informational message shown when no reviewed prescriptions exist
 
 ---
 *Quick-start context for AI sessions*

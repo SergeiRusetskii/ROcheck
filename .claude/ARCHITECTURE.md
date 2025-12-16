@@ -35,7 +35,7 @@ ROcheck/
 ├── MainControl.xaml.cs                             # WPF UI code-behind
 ├── SeverityToColorConverter.cs                     # UI color converter
 ├── Properties/
-│   └── AssemblyInfo.cs                             # Version: v1.6.0
+│   └── AssemblyInfo.cs                             # Version: v1.5.1
 ├── Examples/                                        # Example validators and patterns
 ├── Documentation/                                   # ESAPI XML and PDF documentation
 ├── ROcheck.csproj                                  # Project file (x64, .NET 4.8)
@@ -52,8 +52,16 @@ ROcheck/
 - Initializes validation system via ValidationViewModel
 - Validates that course and plan are loaded before executing
 - Requires namespace `VMS.TPS` for ESAPI entry point
-- Window title: "ROcheck v1.6.0"
-- Assembly name: "ROcheck.esapi"
+- Window title: "TEST_ROcheck v1.5.1"
+- Assembly name: "TEST_ROcheck.esapi"
+
+**Note on TEST_ Prefix:**
+When switching between testing and production, update ALL THREE locations:
+1. `ROcheck.csproj` - `<AssemblyName>` tag (line 11)
+2. `Properties/AssemblyInfo.cs` - `AssemblyProduct` attribute (line 12)
+3. `Script.cs` - `window.Title` property (line ~35)
+
+See CLAUDE.md for complete procedure.
 
 ### ValidationResult.cs
 **Location:** `/ValidationResult.cs`

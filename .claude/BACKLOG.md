@@ -36,6 +36,11 @@
 ## Completed
 
 ### Recently Completed
+- [x] Enhanced prescription filtering with "Reviewed" status check (2025-12-16)
+  - Updated GetReviewedPrescriptionTargetIds to filter by prescription status
+  - Added hasReviewedPrescriptions flag to track if reviewed prescriptions exist
+  - ClinicalGoalsCoverageValidator shows info message when no reviewed prescriptions found
+  - Updated version to 1.5.1 with TEST_ prefix
 - [x] Enhanced SIB validator with percentage dose unit checking (2025-12-15)
   - SIBDoseUnitsValidator now detects percentage units in clinical goals
   - Uses HasPercentageDose helper method for comprehensive checking

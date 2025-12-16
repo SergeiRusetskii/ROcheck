@@ -124,7 +124,7 @@ namespace ROcheck.Validators
                 // Dose conflicts exist but no spatial overlaps
                 results.Add(CreateResult(
                     "Target-OAR Overlap",
-                    $"No spatial overlaps detected between targets and OARs with conflicting dose constraints.",
+                    $"No spatial overlaps detected between targets and OARs with conflicting Dmax constraints.",
                     ValidationSeverity.Info));
             }
             else
@@ -132,7 +132,7 @@ namespace ROcheck.Validators
                 // No dose conflicts at all
                 results.Add(CreateResult(
                     "Target-OAR Overlap",
-                    $"No target-OAR dose conflicts detected.",
+                    $"No target with OAR Dmax conflicts detected.",
                     ValidationSeverity.Info));
             }
         }

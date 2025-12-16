@@ -344,16 +344,26 @@ namespace ROcheck
         /// </summary>
         /// <param name="plan">The plan setup containing prescription information</param>
         /// <returns>HashSet of structure IDs that are prescription targets</returns>
-        public static HashSet<string> GetPrescriptionTargetIds(PlanSetup plan)
+        public static HashSet<string> GetReviewedPrescriptionTargetIds(PlanSetup plan, out bool hasReviewedPrescriptions)
         {
             var targetIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            hasReviewedPrescriptions = false;
 
-            if (plan?.RTPrescription != null)
+            var course = plan?.Course;
+            if (course == null)
+                return targetIds;
+
+            foreach (var prescription in GetPrescriptionsFromCourse(course))
             {
                 try
                 {
-                    // Iterate through prescription targets to extract structure IDs
-                    foreach (var target in plan.RTPrescription.Targets)
+                    var status = GetPropertyValue(prescription, "Status")?.ToString();
+                    if (!string.Equals(status, "Reviewed", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    hasReviewedPrescriptions = true;
+
+                    foreach (var target in GetTargetsFromPrescription(prescription))
                     {
                         // Use reflection to get TargetId property (handles API variations)
                         var targetId = GetPropertyValue(target, "TargetId") as string;
@@ -370,6 +380,56 @@ namespace ROcheck
             }
 
             return targetIds;
+        }
+
+        private static IEnumerable<object> GetPrescriptionsFromCourse(Course course)
+        {
+            if (course == null)
+                yield break;
+
+            // Try common property names first
+            foreach (var propertyName in new[] { "RTPrescriptions", "Prescriptions" })
+            {
+                var property = course.GetType().GetProperty(propertyName);
+                if (property?.GetValue(course) is System.Collections.IEnumerable enumerable)
+                {
+                    foreach (var rx in enumerable)
+                        yield return rx;
+                }
+            }
+
+            // Fallback to potential methods
+            foreach (var methodName in new[] { "GetRTPrescriptions", "GetPrescriptions" })
+            {
+                var method = course.GetType().GetMethod(methodName, Type.EmptyTypes);
+                if (method?.Invoke(course, null) is System.Collections.IEnumerable enumerable)
+                {
+                    foreach (var rx in enumerable)
+                        yield return rx;
+                }
+            }
+        }
+
+        private static IEnumerable<object> GetTargetsFromPrescription(object prescription)
+        {
+            if (prescription == null)
+                yield break;
+
+            // Try Targets property
+            var targetsProperty = prescription.GetType().GetProperty("Targets");
+            if (targetsProperty?.GetValue(prescription) is System.Collections.IEnumerable propertyEnumerable)
+            {
+                foreach (var target in propertyEnumerable)
+                    yield return target;
+            }
+
+            // Fallback to GetTargets method
+            var getTargetsMethod = prescription.GetType().GetMethod("GetTargets", Type.EmptyTypes);
+            if (getTargetsMethod?.Invoke(prescription, null) is System.Collections.IEnumerable methodEnumerable)
+            {
+                foreach (var target in methodEnumerable)
+                    yield return target;
+            }
         }
 
         /// <summary>

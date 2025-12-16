@@ -5,6 +5,7 @@
 ROcheck is a comprehensive validation tool for Varian Eclipse treatment planning systems that performs automated quality checks on radiation therapy treatment plans. It validates structure setup, clinical goal configuration, and prescription consistency to ensure safety and quality in radiation therapy delivery.
 
 [![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/SergeiRusetskii/ROcheck/releases)
+[![License](https://img.shields.io/badge/license-Non--Commercial-orange.svg)](LICENSE)
 [![Eclipse API](https://img.shields.io/badge/Eclipse%20API-18.0+-green.svg)](https://varianapis.github.io/)
 [![.NET](https://img.shields.io/badge/.NET%20Framework-4.8-purple.svg)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-lightgrey.svg)](https://www.microsoft.com/windows)
@@ -102,10 +103,10 @@ ROcheck performs comprehensive validation across multiple aspects of treatment p
 - Prescription-aware: Only validates targets in reviewed prescriptions
 - Wildcard exclusions: Implant*, Lymph*, LN_*
 
-✅ **Color-Coded Results**
-- 🔴 **Error**: Critical issues requiring immediate attention
-- 🟠 **Warning**: Items requiring review or consideration
-- 🟢 **Info**: Confirmations and informational messages
+✅ **Severity-Based Results**
+- 🔴 **Error**: Red indicator - Critical issues requiring immediate attention
+- ⬜ **Warning**: White rectangle - Items requiring review or consideration
+- ⬜ **Info**: White rectangle - Confirmations and informational messages
 
 ✅ **Grouped Validation Categories**
 - Results organized by validation type for easy review
@@ -161,13 +162,13 @@ The tool will automatically:
 
 **Severity Levels:**
 
-- 🔴 **Error**: Must be addressed before plan approval
+- 🔴 **Error** (Red indicator): Must be addressed before plan approval
   - Example: "PTV_60 is 3.2 mm from Body surface. Consider creating EVAL structure"
 
-- 🟠 **Warning**: Requires review and clinical judgment
+- ⬜ **Warning** (White rectangle): Requires review and clinical judgment
   - Example: "Structure 'Liver' has no associated clinical goal"
 
-- 🟢 **Info**: Confirmation that checks passed
+- ⬜ **Info** (White rectangle): Confirmation that checks passed
   - Example: "All 12 applicable structures have associated clinical goals"
 
 **No Results = All Checks Passed**
@@ -347,9 +348,9 @@ var ptv = structures.FirstOrDefault(s => s.Id.StartsWith("PTV"));
 
 ### Performance
 
-- **Typical validation time**: < 2 seconds for standard plans
+- **Typical validation time**: 20-60 seconds (depends on CT slice count and structure volumes)
 - **Memory footprint**: < 50 MB
-- **UI responsiveness**: Instant result display
+- **UI responsiveness**: Results display immediately after validation completes
 - **No external dependencies**: Pure ESAPI implementation
 
 ## Building from Source
@@ -484,9 +485,36 @@ Contributions are welcome! This project follows standard radiation oncology medi
 
 ## License
 
-This project is intended for use with Varian Eclipse treatment planning systems in clinical radiation therapy environments.
+**ROcheck Non-Commercial License**
 
-**Disclaimer**: This tool is provided for quality assurance purposes. Clinical decisions should always be made by qualified medical physics and radiation oncology professionals. This software does not replace professional clinical judgment.
+Copyright (c) 2025 Sergei Rusetskii
+
+### Free for Non-Commercial Use
+
+This software is **free to use** for:
+- ✅ Academic institutions (research and education)
+- ✅ Public hospitals and healthcare facilities (patient care)
+- ✅ Non-profit organizations
+- ✅ Personal learning and development
+
+### Commercial Use Requires License
+
+Commercial use is **NOT permitted** without written permission:
+- ❌ Commercial radiation therapy centers operating for profit
+- ❌ Integration into commercial products or services
+- ❌ Use by for-profit companies or consulting services
+
+**For commercial licensing**, please contact:
+- **Sergei Rusetskii** - [GitHub Profile](https://github.com/SergeiRusetskii)
+- Open an issue or discussion on this repository
+
+### Full License
+
+See [LICENSE](LICENSE) file for complete terms and conditions.
+
+---
+
+**Medical Disclaimer**: This tool is provided for quality assurance purposes in radiation therapy planning. Clinical decisions should always be made by qualified medical physics and radiation oncology professionals. This software does not replace professional clinical judgment or institutional quality assurance procedures.
 
 ## Support & Contact
 

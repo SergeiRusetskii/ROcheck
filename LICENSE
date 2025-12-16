@@ -1,0 +1,66 @@
+ROcheck Non-Commercial License
+
+Copyright (c) 2025 Sergei Rusetskii
+
+TERMS AND CONDITIONS
+
+1. GRANT OF LICENSE
+
+Permission is hereby granted, free of charge, to any person or organization
+obtaining a copy of this software and associated documentation files (the
+"Software"), to use, copy, modify, and distribute the Software for
+NON-COMMERCIAL PURPOSES ONLY, subject to the following conditions:
+
+2. NON-COMMERCIAL USE
+
+Non-commercial use means:
+- Use in academic institutions for research and education
+- Use in public hospitals and healthcare facilities for patient care
+- Personal use for learning and development
+- Use in non-profit organizations for their mission
+
+Non-commercial use does NOT include:
+- Use by commercial radiation therapy centers for profit
+- Integration into commercial products or services
+- Use by for-profit companies or consulting services
+- Any use where the primary purpose is commercial advantage or monetary compensation
+
+3. COMMERCIAL LICENSING
+
+For commercial use, integration into commercial products, or any use not covered
+under "Non-Commercial Use" above, you must:
+- Contact the copyright holder: Sergei Rusetskii
+- Obtain written permission and a separate commercial license
+- GitHub: https://github.com/SergeiRusetskii/ROcheck
+
+4. CONDITIONS
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+5. ATTRIBUTION
+
+You must give appropriate credit to the original author, provide a link to the
+source repository, and indicate if changes were made.
+
+6. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+7. MEDICAL DISCLAIMER
+
+This tool is provided for quality assurance purposes in radiation therapy
+planning. Clinical decisions should always be made by qualified medical physics
+and radiation oncology professionals. This software does not replace professional
+clinical judgment or institutional quality assurance procedures.
+
+---
+
+For commercial licensing inquiries, please contact:
+Sergei Rusetskii - https://github.com/SergeiRusetskii

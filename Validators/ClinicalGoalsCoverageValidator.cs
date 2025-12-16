@@ -98,125 +98,64 @@ namespace ROcheck.Validators
 
         private void DebugPrescriptions(PlanSetup plan, List<ValidationResult> results)
         {
-            var course = plan?.Course;
-            if (course == null)
+            if (plan == null)
             {
                 results.Add(CreateResult(
                     "Clinical Goals existence",
-                    "DEBUG: Course is null",
+                    "DEBUG: Plan is null",
                     ValidationSeverity.Info));
                 return;
             }
 
-            results.Add(CreateResult(
-                "Clinical Goals existence",
-                $"DEBUG: Course = {course.Id}",
-                ValidationSeverity.Info));
+            var debugInfo = new System.Text.StringBuilder();
+            debugInfo.AppendLine($"Plan ID: {plan.Id}");
+            debugInfo.AppendLine($"Course ID: {plan.Course?.Id ?? "NULL"}");
 
-            // Try to get prescriptions using reflection
-            int prescriptionCount = 0;
-            var prescriptionsList = new System.Text.StringBuilder();
-
-            // Try RTPrescriptions property
-            var rtPrescriptionsProperty = course.GetType().GetProperty("RTPrescriptions");
-            if (rtPrescriptionsProperty != null)
+            try
             {
-                prescriptionsList.AppendLine("DEBUG: Found RTPrescriptions property");
-                var rxCollection = rtPrescriptionsProperty.GetValue(course);
-                if (rxCollection is System.Collections.IEnumerable enumerable)
+                // Use documented ESAPI: PlanSetup.RTPrescription property
+                var prescription = plan.RTPrescription;
+
+                if (prescription == null)
                 {
-                    foreach (var rx in enumerable)
-                    {
-                        prescriptionCount++;
-                        var rxInfo = GetPrescriptionDebugInfo(rx, prescriptionCount);
-                        prescriptionsList.AppendLine(rxInfo);
-                    }
+                    debugInfo.AppendLine("RTPrescription: NULL (no prescription linked to this plan)");
                 }
                 else
                 {
-                    prescriptionsList.AppendLine("DEBUG: RTPrescriptions value is not enumerable");
-                }
-            }
-            else
-            {
-                prescriptionsList.AppendLine("DEBUG: RTPrescriptions property NOT found");
-            }
+                    debugInfo.AppendLine($"RTPrescription found:");
+                    debugInfo.AppendLine($"  Status: {prescription.Status?.ToString() ?? "NULL"}");
+                    debugInfo.AppendLine($"  Site: {prescription.Site ?? "NULL"}");
+                    debugInfo.AppendLine($"  NumberOfFractions: {prescription.NumberOfFractions}");
+                    debugInfo.AppendLine($"  RevisionNumber: {prescription.RevisionNumber}");
 
-            // Try Prescriptions property
-            var prescriptionsProperty = course.GetType().GetProperty("Prescriptions");
-            if (prescriptionsProperty != null)
-            {
-                prescriptionsList.AppendLine("DEBUG: Found Prescriptions property");
-                var rxCollection = prescriptionsProperty.GetValue(course);
-                if (rxCollection is System.Collections.IEnumerable enumerable)
-                {
-                    foreach (var rx in enumerable)
+                    // Get targets using documented API
+                    var targets = prescription.Targets;
+                    if (targets == null)
                     {
-                        prescriptionCount++;
-                        var rxInfo = GetPrescriptionDebugInfo(rx, prescriptionCount);
-                        prescriptionsList.AppendLine(rxInfo);
-                    }
-                }
-                else
-                {
-                    prescriptionsList.AppendLine("DEBUG: Prescriptions value is not enumerable");
-                }
-            }
-            else
-            {
-                prescriptionsList.AppendLine("DEBUG: Prescriptions property NOT found");
-            }
-
-            results.Add(CreateResult(
-                "Clinical Goals existence",
-                $"DEBUG: Total prescriptions found: {prescriptionCount}\n{prescriptionsList}",
-                ValidationSeverity.Info));
-        }
-
-        private string GetPrescriptionDebugInfo(object prescription, int index)
-        {
-            if (prescription == null)
-                return $"Rx #{index}: NULL";
-
-            var info = new System.Text.StringBuilder();
-            info.AppendLine($"Rx #{index}:");
-
-            var type = prescription.GetType();
-            info.AppendLine($"  Type: {type.FullName}");
-
-            // Get all properties
-            var properties = type.GetProperties();
-            foreach (var prop in properties)
-            {
-                try
-                {
-                    var value = prop.GetValue(prescription);
-
-                    // Special handling for Targets collection
-                    if (prop.Name == "Targets" && value is System.Collections.IEnumerable targets)
-                    {
-                        var targetsList = new System.Text.StringBuilder();
-                        int targetCount = 0;
-                        foreach (var target in targets)
-                        {
-                            targetCount++;
-                            var targetId = ValidationHelpers.GetPropertyValue(target, "TargetId");
-                            targetsList.Append($"{targetId}, ");
-                        }
-                        info.AppendLine($"  {prop.Name} ({targetCount}): {targetsList}");
+                        debugInfo.AppendLine($"  Targets: NULL");
                     }
                     else
                     {
-                        info.AppendLine($"  {prop.Name} = {value ?? "NULL"}");
+                        int targetCount = 0;
+                        var targetsList = new System.Text.StringBuilder();
+                        foreach (var target in targets)
+                        {
+                            targetCount++;
+                            targetsList.Append($"{target.TargetId}, ");
+                        }
+                        debugInfo.AppendLine($"  Targets ({targetCount}): {targetsList}");
                     }
                 }
-                catch (Exception ex)
-                {
-                    info.AppendLine($"  {prop.Name} = ERROR: {ex.Message}");
-                }
+            }
+            catch (Exception ex)
+            {
+                debugInfo.AppendLine($"ERROR accessing prescription: {ex.Message}");
             }
 
-            return info.ToString();
+            results.Add(CreateResult(
+                "Clinical Goals existence",
+                $"DEBUG Prescription Info:\n{debugInfo}",
+                ValidationSeverity.Info));
         }
     }
 }

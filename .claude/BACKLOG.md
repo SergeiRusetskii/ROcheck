@@ -36,6 +36,14 @@
 ## Completed
 
 ### Recently Completed
+- [x] Update to v1.5.3 - Use documented ESAPI instead of reflection (2025-12-16)
+  - Replaced all reflection code with documented ESAPI methods/properties
+  - Clinical goals: Use PlanSetup.GetClinicalGoals() method
+  - Prescriptions: Use PlanSetup.RTPrescription property (not Course!)
+  - Prescription targets: Use RTPrescription.Targets and RTPrescriptionTarget.TargetId
+  - Removed GetPrescriptionsFromCourse and GetTargetsFromPrescription helper methods
+  - Removed GetClinicalGoalsFromProperty/Method/Course helper methods
+  - All API usage now referenced from VMS.TPS.Common.Model.API.xml documentation
 - [x] Update to v1.5.2 - Added prescription debugging (2025-12-16)
   - Added comprehensive DEBUG output showing all prescription properties
   - Changed section name to "Clinical Goals existence"

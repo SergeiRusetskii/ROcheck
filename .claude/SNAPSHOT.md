@@ -11,8 +11,8 @@
 
 ## Current State
 
-**Version:** v1.5.2
-**Status:** Testing - Prescription debugging added to diagnose extraction issues
+**Version:** v1.5.3
+**Status:** Testing - Using documented ESAPI instead of reflection
 **Branch:** master
 
 ## Project Overview
@@ -52,6 +52,11 @@ ROcheck/
 
 ## Recent Progress
 
+- [x] v1.5.3: Replaced reflection with documented ESAPI
+- [x] Use PlanSetup.GetClinicalGoals() for clinical goals
+- [x] Use PlanSetup.RTPrescription for prescriptions
+- [x] Use RTPrescription.Status and RTPrescription.Targets directly
+- [x] Removed all "imagined" property names and reflection code
 - [x] v1.5.2: Added comprehensive prescription debugging output
 - [x] Changed category name from "Structure Coverage" to "Clinical Goals existence"
 - [x] Fixed TEST_ prefix in ROcheck.csproj

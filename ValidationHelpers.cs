@@ -12,9 +12,9 @@ namespace ROcheck
     public static class ValidationHelpers
     {
         /// <summary>
-        /// Retrieves clinical goals from the plan using multiple access methods for cross-version compatibility.
-        /// Tries 5 different approaches to handle variations across Eclipse API versions.
-        /// Returns unique goals using HashSet to prevent duplicates.
+        /// Retrieves clinical goals from the plan using the documented ESAPI.
+        /// Uses PlanningItem.GetClinicalGoals() method from ESAPI documentation.
+        /// Reference: VMS.TPS.Common.Model.API.xml - M:VMS.TPS.Common.Model.API.PlanningItem.GetClinicalGoals
         /// </summary>
         /// <param name="plan">The plan setup containing clinical goals</param>
         /// <returns>Enumerable collection of clinical goal objects</returns>
@@ -23,72 +23,16 @@ namespace ROcheck
             if (plan == null)
                 yield break;
 
-            var seen = new HashSet<object>();
-
-            foreach (var goal in GetClinicalGoalsFromProperty(plan))
+            // Use documented API method: PlanningItem.GetClinicalGoals()
+            // PlanSetup inherits from PlanningItem
+            var goals = plan.GetClinicalGoals();
+            if (goals != null)
             {
-                if (seen.Add(goal))
-                    yield return goal;
-            }
-
-            foreach (var goal in GetClinicalGoalsFromMethod(plan, "GetClinicalGoals"))
-            {
-                if (seen.Add(goal))
-                    yield return goal;
-            }
-
-            foreach (var goal in GetClinicalGoalsFromMethod(plan, "GetPlanningGoals"))
-            {
-                if (seen.Add(goal))
-                    yield return goal;
-            }
-
-            foreach (var goal in GetClinicalGoalsFromMethod(plan, "GetGoals"))
-            {
-                if (seen.Add(goal))
-                    yield return goal;
-            }
-
-            foreach (var goal in GetClinicalGoalsFromCourse(plan))
-            {
-                if (seen.Add(goal))
+                foreach (var goal in goals)
                     yield return goal;
             }
         }
 
-        private static IEnumerable<object> GetClinicalGoalsFromProperty(PlanSetup plan)
-        {
-            var property = plan.GetType().GetProperty("ClinicalGoals");
-            if (property?.GetValue(plan) is System.Collections.IEnumerable enumerable)
-            {
-                foreach (var goal in enumerable)
-                    yield return goal;
-            }
-        }
-
-        private static IEnumerable<object> GetClinicalGoalsFromMethod(PlanSetup plan, string methodName)
-        {
-            var method = plan.GetType().GetMethod(methodName, Type.EmptyTypes);
-            if (method?.Invoke(plan, null) is System.Collections.IEnumerable enumerable)
-            {
-                foreach (var goal in enumerable)
-                    yield return goal;
-            }
-        }
-
-        private static IEnumerable<object> GetClinicalGoalsFromCourse(PlanSetup plan)
-        {
-            var course = plan.Course;
-            if (course == null)
-                yield break;
-
-            var property = course.GetType().GetProperty("ClinicalGoals");
-            if (property?.GetValue(course) is System.Collections.IEnumerable enumerable)
-            {
-                foreach (var goal in enumerable)
-                    yield return goal;
-            }
-        }
 
         /// <summary>
         /// Builds a dictionary mapping structure IDs to their associated clinical goals.
@@ -338,98 +282,61 @@ namespace ROcheck
         }
 
         /// <summary>
-        /// Extracts target structure IDs from the plan's dose prescription.
-        /// Used for prescription-aware validation to distinguish active treatment targets
-        /// from evaluation/backup structures.
+        /// Extracts target structure IDs from the plan's linked prescription (if reviewed).
+        /// Uses documented ESAPI: PlanSetup.RTPrescription property.
+        /// Reference: VMS.TPS.Common.Model.API.xml - P:VMS.TPS.Common.Model.API.PlanSetup.RTPrescription
+        /// Reference: VMS.TPS.Common.Model.API.xml - T:VMS.TPS.Common.Model.API.RTPrescription
+        /// Reference: VMS.TPS.Common.Model.API.xml - T:VMS.TPS.Common.Model.API.RTPrescriptionTarget
         /// </summary>
         /// <param name="plan">The plan setup containing prescription information</param>
+        /// <param name="hasReviewedPrescriptions">Returns true if a reviewed prescription was found</param>
         /// <returns>HashSet of structure IDs that are prescription targets</returns>
         public static HashSet<string> GetReviewedPrescriptionTargetIds(PlanSetup plan, out bool hasReviewedPrescriptions)
         {
             var targetIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             hasReviewedPrescriptions = false;
 
-            var course = plan?.Course;
-            if (course == null)
+            if (plan == null)
                 return targetIds;
 
-            foreach (var prescription in GetPrescriptionsFromCourse(course))
+            try
             {
-                try
+                // Use documented API: PlanSetup.RTPrescription property
+                // This is the prescription linked to this specific plan
+                var prescription = plan.RTPrescription;
+
+                if (prescription == null)
+                    return targetIds;
+
+                // Check if prescription status is "Reviewed"
+                // Status property returns string or enum - convert to string for comparison
+                var status = prescription.Status?.ToString();
+                if (!string.Equals(status, "Reviewed", StringComparison.OrdinalIgnoreCase))
+                    return targetIds;
+
+                hasReviewedPrescriptions = true;
+
+                // Get targets from prescription using documented API
+                var targets = prescription.Targets;
+                if (targets != null)
                 {
-                    var status = GetPropertyValue(prescription, "Status")?.ToString();
-                    if (!string.Equals(status, "Reviewed", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    hasReviewedPrescriptions = true;
-
-                    foreach (var target in GetTargetsFromPrescription(prescription))
+                    foreach (var target in targets)
                     {
-                        // Use reflection to get TargetId property (handles API variations)
-                        var targetId = GetPropertyValue(target, "TargetId") as string;
+                        // Use documented API: RTPrescriptionTarget.TargetId property
+                        var targetId = target.TargetId;
                         if (!string.IsNullOrEmpty(targetId))
                         {
                             targetIds.Add(targetId);
                         }
                     }
                 }
-                catch
-                {
-                    // If prescription access fails, return empty set (all targets will be excluded)
-                }
+            }
+            catch
+            {
+                // If prescription access fails, return empty set (all targets will be excluded)
             }
 
             return targetIds;
-        }
-
-        private static IEnumerable<object> GetPrescriptionsFromCourse(Course course)
-        {
-            if (course == null)
-                yield break;
-
-            // Try common property names first
-            foreach (var propertyName in new[] { "RTPrescriptions", "Prescriptions" })
-            {
-                var property = course.GetType().GetProperty(propertyName);
-                if (property?.GetValue(course) is System.Collections.IEnumerable enumerable)
-                {
-                    foreach (var rx in enumerable)
-                        yield return rx;
-                }
-            }
-
-            // Fallback to potential methods
-            foreach (var methodName in new[] { "GetRTPrescriptions", "GetPrescriptions" })
-            {
-                var method = course.GetType().GetMethod(methodName, Type.EmptyTypes);
-                if (method?.Invoke(course, null) is System.Collections.IEnumerable enumerable)
-                {
-                    foreach (var rx in enumerable)
-                        yield return rx;
-                }
-            }
-        }
-
-        private static IEnumerable<object> GetTargetsFromPrescription(object prescription)
-        {
-            if (prescription == null)
-                yield break;
-
-            // Try Targets property
-            var targetsProperty = prescription.GetType().GetProperty("Targets");
-            if (targetsProperty?.GetValue(prescription) is System.Collections.IEnumerable propertyEnumerable)
-            {
-                foreach (var target in propertyEnumerable)
-                    yield return target;
-            }
-
-            // Fallback to GetTargets method
-            var getTargetsMethod = prescription.GetType().GetMethod("GetTargets", Type.EmptyTypes);
-            if (getTargetsMethod?.Invoke(prescription, null) is System.Collections.IEnumerable methodEnumerable)
-            {
-                foreach (var target in methodEnumerable)
-                    yield return target;
-            }
         }
 
         /// <summary>

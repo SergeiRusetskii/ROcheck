@@ -1,16 +1,16 @@
-# ROcheck
+﻿# ROcheck
 
 > **Automated Quality Assurance for Varian Eclipse Treatment Planning**
 
 ROcheck is a comprehensive validation tool for Varian Eclipse treatment planning systems that performs automated quality checks on radiation therapy treatment plans. It validates structure setup, clinical goal configuration, and prescription consistency to ensure safety and quality in radiation therapy delivery.
 
 [![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/SergeiRusetskii/ROcheck/releases)
-[![License](https://img.shields.io/badge/license-Non--Commercial-orange.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Community-blue.svg)](LICENSE)
 [![Eclipse API](https://img.shields.io/badge/Eclipse%20API-18.0+-green.svg)](https://varianapis.github.io/)
 [![.NET](https://img.shields.io/badge/.NET%20Framework-4.8-purple.svg)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-lightgrey.svg)](https://www.microsoft.com/windows)
 
-## 📋 Table of Contents
+## рџ“‹ Table of Contents
 
 - [Overview](#overview)
 - [What ROcheck Validates](#what-rocheck-validates)
@@ -39,76 +39,76 @@ ROcheck is an Eclipse Scripting API (ESAPI) plugin that automatically validates 
 
 ROcheck performs comprehensive validation across multiple aspects of treatment planning:
 
-### 🎯 Clinical Goal Coverage
+### рџЋЇ Clinical Goal Coverage
 - Verifies all treatment structures have associated clinical goals
 - Uses prescription-aware filtering (only validates targets in "Reviewed" prescriptions)
 - Excludes support structures (couch, clips, wires, etc.)
 - Provides clear feedback on missing goals
 
-### 📦 Target Containment
+### рџ“¦ Target Containment
 - Validates GTV/CTV volumes are fully contained within their corresponding PTVs
 - Uses voxel-based spatial analysis for accurate containment detection
-- Matches targets by naming convention (e.g., PTV_70 → CTV_70 → GTV_70)
+- Matches targets by naming convention (e.g., PTV_70 в†’ CTV_70 в†’ GTV_70)
 - Flags planning errors where targets extend beyond PTV boundaries
 
-### ⚠️ PTV-OAR Overlap Detection
+### вљ пёЏ PTV-OAR Overlap Detection
 - Identifies spatial overlaps between target volumes and organs at risk
 - Detects dose constraint conflicts (PTV minimum dose vs OAR maximum dose)
 - Prevents planning inconsistencies where targets and OARs have conflicting goals
-- Uses lower-bound target goals (≥) vs Dmax OAR constraints
+- Uses lower-bound target goals (в‰Ґ) vs Dmax OAR constraints
 
-### 📏 Target Resolution
+### рџ“Џ Target Resolution
 - Enforces high-resolution contouring for small target volumes
 - **Error**: PTVs < 5cc must use high-resolution structures
 - **Warning**: PTVs 5-10cc should use high-resolution structures
 - Includes related GTV/CTV volumes in resolution validation
 - Displays smallest PTV volume for reference
 
-### 🏷️ Structure Type Validation
+### рџЏ·пёЏ Structure Type Validation
 - Verifies DICOM structure types match naming conventions
 - Ensures PTVs are labeled as "PTV" type
 - Ensures CTVs are labeled as "CTV" type
 - Ensures GTVs are labeled as "GTV" type
 - Helps maintain consistent structure organization
 
-### 💉 SIB Dose Unit Validation
+### рџ’‰ SIB Dose Unit Validation
 - Automatically detects SIB (Simultaneously Integrated Boost) plans
 - SIB detection: Target dose difference > 6% of higher dose
 - **Requirement**: All clinical goals in SIB plans must use absolute dose (Gy), not percentages
 - Validates both target and OAR goals for consistent dose specification
 - Silent pass: Only shows errors when percentage units are detected
 
-### 📍 PTV-Body Proximity
+### рџ“Ќ PTV-Body Proximity
 - Measures minimum distance from PTV surfaces to Body (skin) surface
-- **Warning**: PTVs ≤ 4mm from skin should consider EVAL structures for optimization
+- **Warning**: PTVs в‰¤ 4mm from skin should consider EVAL structures for optimization
 - Uses 3D contour-based distance calculation across all CT slices
 - Shows closest PTV distance when all PTVs are acceptable
 - Helps optimize superficial target treatment
 
 ## Key Features
 
-✅ **Prescription-Aware Validation**
+вњ… **Prescription-Aware Validation**
 - Accesses ALL prescriptions in course via TreatmentPhases
 - Filters by "Reviewed" status to validate only approved prescriptions
 - Works with both plan-linked and non-linked prescriptions
 
-✅ **Zero Reflection - 100% Documented ESAPI**
+вњ… **Zero Reflection - 100% Documented ESAPI**
 - All code uses officially documented Eclipse Scripting API methods
 - Clinical goals: `PlanSetup.GetClinicalGoals()`
-- Prescriptions: `Course.TreatmentPhases → TreatmentPhase.Prescriptions`
+- Prescriptions: `Course.TreatmentPhases в†’ TreatmentPhase.Prescriptions`
 - No "guessed" property names or reflection-based hacks
 
-✅ **Intelligent Structure Filtering**
+вњ… **Intelligent Structure Filtering**
 - Automatically excludes support structures (Bones, Couch, Clips, Wires)
 - Prescription-aware: Only validates targets in reviewed prescriptions
 - Wildcard exclusions: Implant*, Lymph*, LN_*
 
-✅ **Severity-Based Results**
-- 🔴 **Error**: Red indicator - Critical issues requiring immediate attention
-- ⬜ **Warning**: White rectangle - Items requiring review or consideration
-- ⬜ **Info**: White rectangle - Confirmations and informational messages
+вњ… **Severity-Based Results**
+- рџ”ґ **Error**: Red indicator - Critical issues requiring immediate attention
+- в¬њ **Warning**: White rectangle - Items requiring review or consideration
+- в¬њ **Info**: White rectangle - Confirmations and informational messages
 
-✅ **Grouped Validation Categories**
+вњ… **Grouped Validation Categories**
 - Results organized by validation type for easy review
 - Informational summaries when all checks pass
 - Clear, actionable messages for each finding
@@ -149,7 +149,7 @@ See [Building from Source](#building-from-source) section below.
 ### Running the Validation
 
 1. **Open a treatment plan** in Eclipse
-2. **Navigate to**: Scripts → ROcheck v1.6.0
+2. **Navigate to**: Scripts в†’ ROcheck v1.6.0
 3. **Review results** in the validation window
 
 The tool will automatically:
@@ -162,13 +162,13 @@ The tool will automatically:
 
 **Severity Levels:**
 
-- 🔴 **Error** (Red indicator): Must be addressed before plan approval
+- рџ”ґ **Error** (Red indicator): Must be addressed before plan approval
   - Example: "PTV_60 is 3.2 mm from Body surface. Consider creating EVAL structure"
 
-- ⬜ **Warning** (White rectangle): Requires review and clinical judgment
+- в¬њ **Warning** (White rectangle): Requires review and clinical judgment
   - Example: "Structure 'Liver' has no associated clinical goal"
 
-- ⬜ **Info** (White rectangle): Confirmation that checks passed
+- в¬њ **Info** (White rectangle): Confirmation that checks passed
   - Example: "All 12 applicable structures have associated clinical goals"
 
 **No Results = All Checks Passed**
@@ -188,9 +188,9 @@ The tool will automatically:
 - Targets not in reviewed prescriptions
 
 **Example Results:**
-- ✅ Info: "All 15 applicable structures have associated clinical goals"
-- ⚠️ Warning: "Structure 'Rectum' has no associated clinical goal"
-- ℹ️ Info: "No 'Reviewed' prescriptions found; all target structures were skipped"
+- вњ… Info: "All 15 applicable structures have associated clinical goals"
+- вљ пёЏ Warning: "Structure 'Rectum' has no associated clinical goal"
+- в„№пёЏ Info: "No 'Reviewed' prescriptions found; all target structures were skipped"
 
 ### 2. Target Containment
 
@@ -200,12 +200,12 @@ The tool will automatically:
 - Uses voxel-level spatial analysis
 
 **Naming Convention:**
-- Matches by suffix: PTV_70 → CTV_70 → GTV_70
-- Also handles: PTV1 → CTV1 → GTV1
+- Matches by suffix: PTV_70 в†’ CTV_70 в†’ GTV_70
+- Also handles: PTV1 в†’ CTV1 в†’ GTV1
 
 **Example Results:**
-- ✅ Info: "All target volumes properly contained within PTVs"
-- 🔴 Error: "CTV_60 extends outside PTV_60"
+- вњ… Info: "All target volumes properly contained within PTVs"
+- рџ”ґ Error: "CTV_60 extends outside PTV_60"
 
 ### 3. PTV-OAR Overlap
 
@@ -214,12 +214,12 @@ The tool will automatically:
 - Dose constraint conflicts (PTV min dose vs OAR max dose)
 
 **Conflict Detection:**
-- PTV lower goal (≥ or >) vs OAR Dmax constraint
+- PTV lower goal (в‰Ґ or >) vs OAR Dmax constraint
 - Only reports overlaps with conflicting dose constraints
 
 **Example Results:**
-- ✅ Info: "No target with OAR Dmax conflicts detected"
-- ⚠️ Warning: "PTV_70 (≥70Gy) overlaps SpinalCord (Dmax<45Gy) - spatial overlap detected"
+- вњ… Info: "No target with OAR Dmax conflicts detected"
+- вљ пёЏ Warning: "PTV_70 (в‰Ґ70Gy) overlaps SpinalCord (Dmax<45Gy) - spatial overlap detected"
 
 ### 4. Target Resolution
 
@@ -233,20 +233,20 @@ The tool will automatically:
 - > 10cc: No validation
 
 **Example Results:**
-- ✅ Info: "All small targets use high-resolution structures"
-- 🔴 Error: "PTV_boost (2.3cc) must use high-resolution contouring"
+- вњ… Info: "All small targets use high-resolution structures"
+- рџ”ґ Error: "PTV_boost (2.3cc) must use high-resolution contouring"
 
 ### 5. Structure Types
 
 **What it checks:**
 - DICOM structure type matches naming convention
-- PTV structures → type "PTV"
-- CTV structures → type "CTV"
-- GTV structures → type "GTV"
+- PTV structures в†’ type "PTV"
+- CTV structures в†’ type "CTV"
+- GTV structures в†’ type "GTV"
 
 **Example Results:**
-- ✅ Info: "All 6 target structures have correct DICOM types"
-- ⚠️ Warning: "PTV_70 has type 'NONE' but should be 'PTV'"
+- вњ… Info: "All 6 target structures have correct DICOM types"
+- вљ пёЏ Warning: "PTV_70 has type 'NONE' but should be 'PTV'"
 
 ### 6. SIB Dose Units
 
@@ -258,12 +258,12 @@ The tool will automatically:
 ```
 For each pair of targets with clinical goals:
   dose_difference = |dose1 - dose2| / max(dose1, dose2) * 100%
-  if dose_difference > 6% → Plan is SIB
+  if dose_difference > 6% в†’ Plan is SIB
 ```
 
 **Example Results:**
-- ✅ Silent pass when not SIB or all goals in Gy
-- 🔴 Error: "SIB plan detected: clinical goal for 'PTV_54' uses percentage dose units. SIB plans require Gy units for all clinical goals"
+- вњ… Silent pass when not SIB or all goals in Gy
+- рџ”ґ Error: "SIB plan detected: clinical goal for 'PTV_54' uses percentage dose units. SIB plans require Gy units for all clinical goals"
 
 ### 7. PTV-Body Proximity
 
@@ -277,8 +277,8 @@ For each pair of targets with clinical goals:
 - Finds global minimum distance
 
 **Example Results:**
-- ✅ Info: "Closest PTV_70 is 12.3 mm from Body surface"
-- ⚠️ Warning: "PTV_breast is 3.1 mm from Body surface. Consider creating EVAL structure"
+- вњ… Info: "Closest PTV_70 is 12.3 mm from Body surface"
+- вљ пёЏ Warning: "PTV_breast is 3.1 mm from Body surface. Consider creating EVAL structure"
 
 ## Technical Details
 
@@ -288,19 +288,19 @@ For each pair of targets with clinical goals:
 
 ```
 ROcheck/
-├── Validators/              # Validation logic
-│   ├── ValidatorBase.cs    # Abstract base class
-│   ├── ClinicalGoalsCoverageValidator.cs
-│   ├── TargetContainmentValidator.cs
-│   ├── TargetOAROverlapValidator.cs
-│   ├── PTVBodyProximityValidator.cs
-│   ├── TargetResolutionValidator.cs
-│   ├── StructureTypesValidator.cs
-│   └── SIBDoseUnitsValidator.cs
-├── RootValidator.cs         # Orchestrates all validators
-├── ValidationHelpers.cs     # Spatial algorithms, utilities
-├── ValidationViewModel.cs   # MVVM view model
-└── MainControl.xaml        # WPF UI
+в”њв”Ђв”Ђ Validators/              # Validation logic
+в”‚   в”њв”Ђв”Ђ ValidatorBase.cs    # Abstract base class
+в”‚   в”њв”Ђв”Ђ ClinicalGoalsCoverageValidator.cs
+в”‚   в”њв”Ђв”Ђ TargetContainmentValidator.cs
+в”‚   в”њв”Ђв”Ђ TargetOAROverlapValidator.cs
+в”‚   в”њв”Ђв”Ђ PTVBodyProximityValidator.cs
+в”‚   в”њв”Ђв”Ђ TargetResolutionValidator.cs
+в”‚   в”њв”Ђв”Ђ StructureTypesValidator.cs
+в”‚   в””в”Ђв”Ђ SIBDoseUnitsValidator.cs
+в”њв”Ђв”Ђ RootValidator.cs         # Orchestrates all validators
+в”њв”Ђв”Ђ ValidationHelpers.cs     # Spatial algorithms, utilities
+в”њв”Ђв”Ђ ValidationViewModel.cs   # MVVM view model
+в””в”Ђв”Ђ MainControl.xaml        # WPF UI
 ```
 
 ### Key Algorithms
@@ -447,11 +447,11 @@ Contributions are welcome! This project follows standard radiation oncology medi
 ## Version History
 
 ### v1.6.0 (2025-12-16) - Current Release
-- ✅ Production release with full prescription support
-- ✅ Access ALL prescriptions via Course.TreatmentPhases.Prescriptions
-- ✅ Works with both linked and non-linked prescriptions
-- ✅ 100% documented ESAPI (zero reflection)
-- ✅ Removed TEST_ prefix - production ready
+- вњ… Production release with full prescription support
+- вњ… Access ALL prescriptions via Course.TreatmentPhases.Prescriptions
+- вњ… Works with both linked and non-linked prescriptions
+- вњ… 100% documented ESAPI (zero reflection)
+- вњ… Removed TEST_ prefix - production ready
 
 ### v1.5.x (2025-12-16) - Development Series
 - Enhanced prescription filtering with "Reviewed" status
@@ -485,24 +485,19 @@ Contributions are welcome! This project follows standard radiation oncology medi
 
 ## License
 
-**ROcheck Non-Commercial License**
+**ROcheck Community License**
 
 Copyright (c) 2025 Sergei Rusetskii
 
-### Free for Non-Commercial Use
+### What's Allowed
+- Internal use (including commercial clinics), with modifications for internal needs
+- Free redistribution with attribution and a link to this repository (no fees)
+- Free, non-profit SaaS/hosted use with attribution
 
-This software is **free to use** for:
-- ✅ Academic institutions (research and education)
-- ✅ Public hospitals and healthcare facilities (patient care)
-- ✅ Non-profit organizations
-- ✅ Personal learning and development
-
-### Commercial Use Requires License
-
-Commercial use is **NOT permitted** without written permission:
-- ❌ Commercial radiation therapy centers operating for profit
-- ❌ Integration into commercial products or services
-- ❌ Use by for-profit companies or consulting services
+### Not Allowed
+- Embedding or bundling ROcheck (original or modified) into paid products or services
+- Providing the software (original or modified) as paid SaaS/hosted offerings
+- Including ROcheck in paid consulting deliverables as a bundled component
 
 **For commercial licensing**, please contact:
 - **Sergei Rusetskii** - [GitHub Profile](https://github.com/SergeiRusetskii)
@@ -536,3 +531,4 @@ See [LICENSE](LICENSE) file for complete terms and conditions.
 **Framework**: Claude Code Starter v2.1
 
 *ROcheck - Ensuring quality and safety in radiation therapy planning*
+

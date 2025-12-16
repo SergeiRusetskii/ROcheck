@@ -1,4 +1,4 @@
-ROcheck Non-Commercial License
+ROcheck Community License
 
 Copyright (c) 2025 Sergei Rusetskii
 
@@ -8,40 +8,40 @@ TERMS AND CONDITIONS
 
 Permission is hereby granted, free of charge, to any person or organization
 obtaining a copy of this software and associated documentation files (the
-"Software"), to use, copy, modify, and distribute the Software for
-NON-COMMERCIAL PURPOSES ONLY, subject to the following conditions:
+"Software") to use, copy, modify, and redistribute the Software under the
+conditions below.
 
-2. NON-COMMERCIAL USE
+2. PERMITTED USE
 
-Non-commercial use means:
-- Use in academic institutions for research and education
-- Use in public hospitals and healthcare facilities for patient care
-- Personal use for learning and development
-- Use in non-profit organizations for their mission
+- Internal use is permitted for any organization (including commercial clinics),
+  with the right to modify for internal needs.
+- Non-profit SaaS/hosted use is permitted if offered free of charge with proper
+  attribution to this repository.
 
-Non-commercial use does NOT include:
-- Use by commercial radiation therapy centers for profit
-- Integration into commercial products or services
-- Use by for-profit companies or consulting services
-- Any use where the primary purpose is commercial advantage or monetary compensation
+3. REDISTRIBUTION
 
-3. COMMERCIAL LICENSING
+Redistribution of the Software (original or modified) is permitted only if ALL
+of the following are true:
+- No fee or other compensation is charged for the Software itself.
+- Attribution to "ROcheck" and a link to the original repository are included.
+- This license text and copyright notice are provided with the Software.
 
-For commercial use, integration into commercial products, or any use not covered
-under "Non-Commercial Use" above, you must:
-- Contact the copyright holder: Sergei Rusetskii
-- Obtain written permission and a separate commercial license
-- GitHub: https://github.com/SergeiRusetskii/ROcheck
+4. PROHIBITED COMMERCIAL USE
 
-4. CONDITIONS
+You may NOT:
+- Embed, incorporate, or bundle the Software (or derivatives) into any product
+  or service offered for a fee or other commercial advantage.
+- Provide paid consulting deliverables that include the Software (original or
+  modified) as a bundled component.
+- Offer the Software or derivatives as paid SaaS/hosted services.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Commercial use outside these terms requires a separate commercial license from
+the copyright holder.
 
-5. ATTRIBUTION
+5. NO TRADEMARK OR ENDORSEMENT RIGHTS
 
-You must give appropriate credit to the original author, provide a link to the
-source repository, and indicate if changes were made.
+This license does not grant any rights to use the ROcheck name, logos, or other
+trademarks, nor imply endorsement.
 
 6. NO WARRANTY
 

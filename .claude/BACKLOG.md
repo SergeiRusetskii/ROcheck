@@ -36,6 +36,17 @@
 ## Completed
 
 ### Recently Completed
+- [x] Release v1.6.0 - Production release (2025-12-16)
+  - Removed TEST_ prefix from all three locations
+  - Updated version to 1.6.0 (minor version for significant milestone)
+  - Removed all debug code from ClinicalGoalsCoverageValidator
+  - Production ready with full prescription support via TreatmentPhases
+  - All code uses documented ESAPI (no reflection)
+  - Fully functional prescription filtering for reviewed prescriptions
+- [x] Update to v1.5.4 - Access ALL prescriptions via TreatmentPhases (2025-12-16)
+  - Fixed prescription access to use Course.TreatmentPhases.Prescriptions
+  - Works with both linked and non-linked prescriptions
+  - Collects all reviewed prescriptions from all treatment phases
 - [x] Update to v1.5.3 - Use documented ESAPI instead of reflection (2025-12-16)
   - Replaced all reflection code with documented ESAPI methods/properties
   - Clinical goals: Use PlanSetup.GetClinicalGoals() method

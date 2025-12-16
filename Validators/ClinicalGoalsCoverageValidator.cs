@@ -35,9 +35,6 @@ namespace ROcheck.Validators
             // Extract target structure IDs from prescription for smart target filtering
             var prescriptionTargetIds = ValidationHelpers.GetReviewedPrescriptionTargetIds(plan, out bool hasReviewedPrescriptions);
 
-            // DEBUG: Output prescription information
-            DebugPrescriptions(plan, results);
-
             ValidateClinicalGoalPresence(structureSet.Structures, structureGoals, prescriptionTargetIds, hasReviewedPrescriptions, results);
 
             return results;
@@ -94,110 +91,6 @@ namespace ROcheck.Validators
                     $"No structures found requiring clinical goals (all are excluded).",
                     ValidationSeverity.Info));
             }
-        }
-
-        private void DebugPrescriptions(PlanSetup plan, List<ValidationResult> results)
-        {
-            if (plan == null)
-            {
-                results.Add(CreateResult(
-                    "Clinical Goals existence",
-                    "DEBUG: Plan is null",
-                    ValidationSeverity.Info));
-                return;
-            }
-
-            var debugInfo = new System.Text.StringBuilder();
-            debugInfo.AppendLine($"Plan ID: {plan.Id}");
-            debugInfo.AppendLine($"Course ID: {plan.Course?.Id ?? "NULL"}");
-            debugInfo.AppendLine();
-
-            try
-            {
-                // Method 1: Plan's linked prescription (may be null)
-                debugInfo.AppendLine("Method 1 - Plan.RTPrescription (linked prescription):");
-                var linkedPrescription = plan.RTPrescription;
-                if (linkedPrescription == null)
-                {
-                    debugInfo.AppendLine("  NULL (no prescription linked to this plan)");
-                }
-                else
-                {
-                    debugInfo.AppendLine($"  Status: {linkedPrescription.Status?.ToString() ?? "NULL"}");
-                    debugInfo.AppendLine($"  Targets: {GetTargetsList(linkedPrescription.Targets)}");
-                }
-                debugInfo.AppendLine();
-
-                // Method 2: All prescriptions from Course TreatmentPhases (documented API)
-                debugInfo.AppendLine("Method 2 - Course.TreatmentPhases.Prescriptions (ALL prescriptions):");
-                var course = plan.Course;
-                if (course == null)
-                {
-                    debugInfo.AppendLine("  Course is NULL");
-                }
-                else
-                {
-                    var treatmentPhases = course.TreatmentPhases;
-                    if (treatmentPhases == null)
-                    {
-                        debugInfo.AppendLine("  TreatmentPhases is NULL");
-                    }
-                    else
-                    {
-                        int phaseIndex = 0;
-                        int totalPrescriptions = 0;
-                        foreach (var phase in treatmentPhases)
-                        {
-                            phaseIndex++;
-                            var prescriptions = phase.Prescriptions;
-                            if (prescriptions == null)
-                            {
-                                debugInfo.AppendLine($"  Phase #{phaseIndex}: Prescriptions is NULL");
-                                continue;
-                            }
-
-                            int rxIndex = 0;
-                            foreach (var rx in prescriptions)
-                            {
-                                rxIndex++;
-                                totalPrescriptions++;
-                                debugInfo.AppendLine($"  Phase #{phaseIndex}, Rx #{rxIndex}:");
-                                debugInfo.AppendLine($"    Status: {rx.Status?.ToString() ?? "NULL"}");
-                                debugInfo.AppendLine($"    Site: {rx.Site ?? "NULL"}");
-                                debugInfo.AppendLine($"    Fractions: {rx.NumberOfFractions}");
-                                debugInfo.AppendLine($"    Targets: {GetTargetsList(rx.Targets)}");
-                            }
-                        }
-                        debugInfo.AppendLine($"  Total prescriptions found: {totalPrescriptions}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                debugInfo.AppendLine($"ERROR: {ex.Message}");
-                debugInfo.AppendLine($"Stack: {ex.StackTrace}");
-            }
-
-            results.Add(CreateResult(
-                "Clinical Goals existence",
-                $"DEBUG Prescription Info:\n{debugInfo}",
-                ValidationSeverity.Info));
-        }
-
-        private string GetTargetsList(System.Collections.IEnumerable targets)
-        {
-            if (targets == null)
-                return "NULL";
-
-            var targetsList = new System.Text.StringBuilder();
-            int count = 0;
-            foreach (var target in targets)
-            {
-                count++;
-                var targetId = ValidationHelpers.GetPropertyValue(target, "TargetId");
-                targetsList.Append($"{targetId}, ");
-            }
-            return count > 0 ? $"({count}) {targetsList}" : "(0)";
         }
     }
 }

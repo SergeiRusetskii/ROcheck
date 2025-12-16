@@ -11,8 +11,8 @@
 
 ## Current State
 
-**Version:** v1.5.3
-**Status:** Testing - Using documented ESAPI instead of reflection
+**Version:** v1.6.0
+**Status:** Production - Ready for deployment with full prescription support
 **Branch:** master
 
 ## Project Overview
@@ -52,10 +52,15 @@ ROcheck/
 
 ## Recent Progress
 
+- [x] v1.6.0: Production release with full prescription support
+- [x] Access ALL prescriptions via Course.TreatmentPhases.Prescriptions
+- [x] Works with both linked and non-linked prescriptions
+- [x] Removed TEST_ prefix - production ready
+- [x] Removed all debug code
+- [x] v1.5.4: Fixed prescription access to use TreatmentPhases
 - [x] v1.5.3: Replaced reflection with documented ESAPI
 - [x] Use PlanSetup.GetClinicalGoals() for clinical goals
-- [x] Use PlanSetup.RTPrescription for prescriptions
-- [x] Use RTPrescription.Status and RTPrescription.Targets directly
+- [x] Use documented API for prescription access
 - [x] Removed all "imagined" property names and reflection code
 - [x] v1.5.2: Added comprehensive prescription debugging output
 - [x] Changed category name from "Structure Coverage" to "Clinical Goals existence"
@@ -77,14 +82,15 @@ ROcheck/
 
 ## Active Work
 
-- Ready for production deployment
-- All refactoring complete and tested
+- Production ready v1.6.0
+- All features working with documented ESAPI
+- Prescription filtering fully functional
 
 ## Next Steps
 
 - Deploy to Eclipse plugins directory
 - Monitor production usage
-- Gather user feedback
+- Gather user feedback for future enhancements
 
 ## Key Concepts
 

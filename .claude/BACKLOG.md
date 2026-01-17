@@ -36,6 +36,12 @@
 ## Completed
 
 ### Recently Completed
+- [x] Release v1.6.3 - Critical bug fixes from Eclipse v18 port (2026-01-17)
+  - Fixed "Structure does not have segment model" crash
+  - Added HasSegment checks in IsStructureContained and StructuresOverlap
+  - Excluded MARKER type structures from all validators
+  - Updated ValidationHelpers.cs and 5 validators
+  - Changes validated in Eclipse v16.1 environment
 - [x] Release v1.6.0 - Production release (2025-12-16)
   - Removed TEST_ prefix from all three locations
   - Updated version to 1.6.0 (minor version for significant milestone)

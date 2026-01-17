@@ -50,6 +50,11 @@ namespace ROcheck.Validators
 
             foreach (var structure in structureList)
             {
+                // Skip MARKER and SUPPORT type structures
+                if (string.Equals(structure.DicomType, "MARKER", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(structure.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 // Check if this is a target structure
                 bool isTarget = structure.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase) ||
                                 structure.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase) ||

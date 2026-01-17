@@ -37,9 +37,11 @@ namespace ROcheck.Validators
                 return results;
             }
 
-            // Find all PTV structures (only by name prefix, not DICOM type)
+            // Find all PTV structures (by name prefix, exclude MARKER/SUPPORT types)
             var ptvStructures = context.StructureSet.Structures
-                .Where(s => s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase))
+                .Where(s => s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase) &&
+                           !string.Equals(s.DicomType, "MARKER", StringComparison.OrdinalIgnoreCase) &&
+                           !string.Equals(s.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             if (!ptvStructures.Any())

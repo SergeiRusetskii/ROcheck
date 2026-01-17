@@ -35,7 +35,10 @@ namespace ROcheck.Validators
             int checkedPairs = 0;
 
             // For each PTV, check if corresponding CTV and GTV are fully contained
-            foreach (var ptv in structureList.Where(s => s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase)))
+            foreach (var ptv in structureList.Where(s =>
+                s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(s.DicomType, "MARKER", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(s.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase)))
             {
                 // Extract suffix from PTV name (e.g., "59.4" from "PTV_59.4")
                 string suffix = ValidationHelpers.GetTargetSuffix(ptv.Id, "PTV");
@@ -46,7 +49,9 @@ namespace ROcheck.Validators
                     // Find matching target by prefix and suffix
                     var target = structureList.FirstOrDefault(s =>
                         s.Id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(ValidationHelpers.GetTargetSuffix(s.Id, prefix), suffix, StringComparison.OrdinalIgnoreCase));
+                        string.Equals(ValidationHelpers.GetTargetSuffix(s.Id, prefix), suffix, StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(s.DicomType, "MARKER", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(s.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase));
 
                     if (target != null)
                     {

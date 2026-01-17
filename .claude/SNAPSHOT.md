@@ -11,8 +11,8 @@
 
 ## Current State
 
-**Version:** v1.6.0
-**Status:** Production - Ready for deployment with full prescription support
+**Version:** v1.6.3
+**Status:** Production - Ready for deployment with bug fixes
 **Branch:** master
 
 ## Project Overview
@@ -52,6 +52,12 @@ ROcheck/
 
 ## Recent Progress
 
+- [x] v1.6.3: MARKER structure exclusion (from Eclipse v18 port)
+- [x] Exclude MARKER type structures from all validators (reference points, not structures)
+- [x] Updated 6 files: ValidationHelpers, 5 validators (TargetContainment, PTVBodyProximity, StructureTypes, TargetResolution, SIBDoseUnits)
+- [x] v1.6.2: Segment model safety checks (from Eclipse v18 port)
+- [x] Added HasSegment checks before spatial operations to prevent crashes
+- [x] Updated IsStructureContained and StructuresOverlap methods in ValidationHelpers
 - [x] v1.6.0: Production release with full prescription support
 - [x] Access ALL prescriptions via Course.TreatmentPhases.Prescriptions
 - [x] Works with both linked and non-linked prescriptions
@@ -85,10 +91,9 @@ ROcheck/
 
 ## Active Work
 
-- ✅ v1.6.0 completed and pushed to GitHub
-- ✅ Repository public-ready with comprehensive documentation
-- ✅ Community License implemented
-- ✅ Zero reflection - 100% documented ESAPI
+- ✅ v1.6.3 completed - Critical bug fixes from Eclipse v18 port
+- ✅ Both changes validated and tested in Eclipse v16.1 environment
+- ✅ Ready to push to GitHub
 
 ## Next Steps
 

@@ -31,6 +31,11 @@ namespace ROcheck.Validators
 
             foreach (var structure in structures)
             {
+                // Skip MARKER and SUPPORT type structures
+                if (string.Equals(structure.DicomType, "MARKER", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(structure.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 // Check PTV structures have PTV DICOM type
                 if (structure.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase))
                 {

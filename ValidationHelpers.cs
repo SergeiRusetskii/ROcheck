@@ -438,6 +438,10 @@ namespace ROcheck
             if (inner == null || outer == null || inner.IsEmpty || outer.IsEmpty)
                 return true;
 
+            // Structures must have segment models for spatial containment checks
+            if (!inner.HasSegment || !outer.HasSegment)
+                return true;
+
             if (image == null)
                 return true;
 
@@ -483,6 +487,10 @@ namespace ROcheck
             if (a == null || b == null || a.IsEmpty || b.IsEmpty)
                 return false;
 
+            // Structures must have segment models for spatial overlap checks
+            if (!a.HasSegment || !b.HasSegment)
+                return false;
+
             if (image == null)
                 return false;
 
@@ -520,15 +528,16 @@ namespace ROcheck
         /// Implements prescription-aware exclusion logic for target structures.
         ///
         /// Exclusion rules:
-        /// 1. SUPPORT structures (DICOM type = SUPPORT)
+        /// 1. SUPPORT and MARKER structures (DICOM type = SUPPORT or MARKER)
         /// 2. Structures with specific patterns: z_*, *wire*, *Encompass*, *Enc Marker*, *Dose*, Implant*, Lymph*, LN_*
         /// 3. Structures in ExcludedStructures list (Bones, CouchInterior, Clips, Scar_Wire, Sternum)
         /// 4. GTV/CTV/PTV structures NOT in the dose prescription (evaluation/backup targets)
         /// </summary>
         public static bool IsStructureExcluded(Structure structure, HashSet<string> prescriptionTargetIds, HashSet<string> excludedStructures)
         {
-            // Exclude structures with DICOM type 'SUPPORT'
-            if (string.Equals(structure.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase))
+            // Exclude structures with DICOM type 'SUPPORT' or 'MARKER'
+            if (string.Equals(structure.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(structure.DicomType, "MARKER", StringComparison.OrdinalIgnoreCase))
                 return true;
 
             // Exclude structures with certain patterns in their names

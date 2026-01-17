@@ -33,7 +33,10 @@ namespace ROcheck.Validators
             int ptvCountBelow10cc = 0;
             double? smallestPtvVolume = null;
 
-            foreach (var ptv in structureList.Where(s => s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase)))
+            foreach (var ptv in structureList.Where(s =>
+                s.Id.StartsWith("PTV", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(s.DicomType, "MARKER", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(s.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase)))
             {
                 checkedPtvs++;
                 double volume = ptv.Volume;
@@ -52,12 +55,16 @@ namespace ROcheck.Validators
 
                 var matchingCtv = structureList.FirstOrDefault(s =>
                     s.Id.StartsWith("CTV", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(ValidationHelpers.GetTargetSuffix(s.Id, "CTV"), suffix, StringComparison.OrdinalIgnoreCase));
+                    string.Equals(ValidationHelpers.GetTargetSuffix(s.Id, "CTV"), suffix, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(s.DicomType, "MARKER", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(s.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase));
                 if (matchingCtv != null) linkedTargets.Add(matchingCtv);
 
                 var matchingGtv = structureList.FirstOrDefault(s =>
                     s.Id.StartsWith("GTV", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(ValidationHelpers.GetTargetSuffix(s.Id, "GTV"), suffix, StringComparison.OrdinalIgnoreCase));
+                    string.Equals(ValidationHelpers.GetTargetSuffix(s.Id, "GTV"), suffix, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(s.DicomType, "MARKER", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(s.DicomType, "SUPPORT", StringComparison.OrdinalIgnoreCase));
                 if (matchingGtv != null) linkedTargets.Add(matchingGtv);
 
                 // Check if all related targets use high resolution

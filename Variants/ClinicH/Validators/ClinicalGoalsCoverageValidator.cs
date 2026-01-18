@@ -33,9 +33,9 @@ namespace ROcheck.Validators
             var structureGoals = ValidationHelpers.BuildStructureGoalLookup(clinicalGoals);
 
             // Extract target structure IDs from prescription for smart target filtering
-            var prescriptionTargetIds = ValidationHelpers.GetReviewedPrescriptionTargetIds(plan, out bool hasReviewedPrescriptions);
+            var prescriptionTargetIds = ValidationHelpers.GetReviewedPrescriptionTargetIds(plan, out bool hasPrescriptions);
 
-            ValidateClinicalGoalPresence(structureSet.Structures, structureGoals, prescriptionTargetIds, hasReviewedPrescriptions, results);
+            ValidateClinicalGoalPresence(structureSet.Structures, structureGoals, prescriptionTargetIds, hasPrescriptions, results);
 
             return results;
         }
@@ -43,7 +43,7 @@ namespace ROcheck.Validators
         private void ValidateClinicalGoalPresence(IEnumerable<Structure> structures,
             Dictionary<string, List<object>> structureGoals,
             HashSet<string> prescriptionTargetIds,
-            bool hasReviewedPrescriptions,
+            bool hasPrescriptions,
             List<ValidationResult> results)
         {
             int initialCount = results.Count;
@@ -67,12 +67,12 @@ namespace ROcheck.Validators
                 }
             }
 
-            // Add note when no reviewed prescriptions were found (targets skipped)
-            if (!hasReviewedPrescriptions)
+            // Add note when no prescriptions were found (targets skipped)
+            if (!hasPrescriptions)
             {
                 results.Add(CreateResult(
                     "Clinical Goals existence",
-                    "No 'Reviewed' prescriptions found; all target structures were skipped.",
+                    "No prescriptions found; all target structures were skipped.",
                     ValidationSeverity.Info));
             }
 

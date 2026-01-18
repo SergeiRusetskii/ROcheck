@@ -206,34 +206,193 @@ echo '{"status": "clean", "timestamp": "'$(date -Iseconds)'"}' > .claude/.last_s
 - DO NOT commit without updating metafiles
 - ALWAYS mark session clean at completion
 
+---
+
+## Multi-Variant Workflow
+
+**Architecture:** Monorepo with two clinic variants
+
+### Variant Structure
+
+**Primary Variant (ClinicE):**
+- Location: `Variants/ClinicE/`
+- Eclipse: 18.0
+- Configuration-driven (uses IValidationConfig)
+- All development happens here first
+
+**Secondary Variant (ClinicH):**
+- Location: `Variants/ClinicH/`
+- Eclipse: 16.1
+- Hardcoded values (config refactor pending)
+- Updated only when explicitly requested
+
+**Shared Infrastructure (Core/):**
+- `Core/Base/` - ValidatorBase, IValidationConfig
+- `Core/Models/` - ValidationResult
+- `Core/UI/` - MainControl, SeverityToColorConverter
+- `Core/Helpers/` - ValidationHelpers
+- Shared by both variants automatically
+
+### Development Workflow
+
+**Normal Development (ClinicE Primary):**
+
+1. All new work happens in ClinicE:
+   - Develop in `Variants/ClinicE/`
+   - Update `.claude/SNAPSHOT.md` with ClinicE version
+   - Update `.claude/variants/clinicE.md` with changes
+   - Commit and push
+
+2. ClinicH is NOT automatically updated
+
+**Manual Porting (ClinicE → ClinicH):**
+
+Only happens when explicitly requested by user.
+
+1. Identify what to port:
+   - Review changes in ClinicE between versions
+   - User specifies which feature/fix to port
+
+2. Port changes:
+   ```bash
+   # Copy changed files from ClinicE to ClinicH
+   cp Variants/ClinicE/Validators/SomeValidator.cs Variants/ClinicH/Validators/
+
+   # Adjust for ClinicH config differences (if needed)
+   # (e.g., different thresholds, structure names)
+   ```
+
+3. Update metafiles:
+   - `.claude/variants/clinicH.md` - Add to Porting Log
+   - Note source ClinicE version
+   - Update ClinicH version number if needed
+
+4. Test ClinicH independently
+
+5. Commit with clear message:
+   ```bash
+   git commit -m "port: HasSegment checks to ClinicH (from ClinicE v1.6.3)"
+   ```
+
+**When Bug Found in ClinicH:**
+
+If bug discovered during ClinicH testing that likely affects ClinicE:
+
+1. Fix in ClinicE first (since it's primary)
+2. Test in ClinicE
+3. Port fix back to ClinicH
+4. Update both variant tracking files
+
+**Core/ Infrastructure Changes:**
+
+When Core/ infrastructure changes:
+
+1. Both variants affected (since both reference Core/)
+2. Build both variants to verify:
+   ```bash
+   # User builds manually - DO NOT execute msbuild
+   # Just note what needs building
+   ```
+3. If ClinicH breaks, fix is required (can't ignore Core changes)
+4. Update both variant tracking files
+
+### Variant Tracking Files
+
+**`.claude/variants/clinicE.md`:**
+- ClinicE deployment status
+- Configuration details
+- Testing notes
+- Recent changes
+
+**`.claude/variants/clinicH.md`:**
+- ClinicH porting log
+- Pending ports
+- Testing status
+- Configuration notes (when refactored)
+
+### Configuration System
+
+**ClinicE (Configuration-Driven):**
+- `Core/Base/IValidationConfig.cs` - Interface
+- `Variants/ClinicE/Config/ClinicEConfig.cs` - Implementation
+- Validators accept config via constructor injection
+- Easy to change thresholds and exclusions
+
+**ClinicH (Hardcoded - Pending Config):**
+- Still uses hardcoded values
+- Config refactor will be ported when explicitly requested
+- Different thresholds expected (more conservative)
+
+### File Paths
+
+**ClinicE Files:**
+- Project: `Variants/ClinicE/ROcheck.esapi.csproj`
+- Entry: `Variants/ClinicE/Script.cs`
+- Config: `Variants/ClinicE/Config/ClinicEConfig.cs`
+- Validators: `Variants/ClinicE/Validators/*.cs`
+
+**ClinicH Files:**
+- Project: `Variants/ClinicH/ROcheck.esapi.csproj`
+- Entry: `Variants/ClinicH/Script.cs`
+- Validators: `Variants/ClinicH/Validators/*.cs`
+
+**Core Files (Shared):**
+- Base: `Core/Base/ValidatorBase.cs`, `Core/Base/IValidationConfig.cs`
+- Models: `Core/Models/ValidationResult.cs`
+- UI: `Core/UI/MainControl.xaml`, `Core/UI/SeverityToColorConverter.cs`
+- Helpers: `Core/Helpers/ValidationHelpers.cs`
+
+### TEST_ Prefix Procedure (Multi-Variant)
+
+**ClinicE:**
+1. `Variants/ClinicE/ROcheck.esapi.csproj` (line 11)
+2. `Variants/ClinicE/Properties/AssemblyInfo.cs` (line 12)
+3. `Variants/ClinicE/Script.cs` (line ~35)
+
+**ClinicH:**
+1. `Variants/ClinicH/ROcheck.esapi.csproj` (line 11)
+2. `Variants/ClinicH/Properties/AssemblyInfo.cs` (line 12)
+3. `Variants/ClinicH/Script.cs` (line ~35)
+
+Update all three files in the respective variant.
+
+---
+
 ## ESAPI Documentation
 
-**Location:** `Documentation/`
+**Location:** `Documentation/` (organized by variant)
 
-This project includes complete ESAPI API reference documentation:
+This project includes complete ESAPI API reference documentation for both Eclipse versions:
 
 **XML IntelliSense Files (use with Read tool or Grep):**
-- `Documentation/VMS.TPS.Common.Model.API.xml` - Complete API reference
-- `Documentation/VMS.TPS.Common.Model.Types.xml` - Type definitions and enums
 
-**PDF Reference Guides:**
-- `Eclipse Scripting API Reference Guide 18.0.pdf` - Official ESAPI manual
-- `Image Registration and Segmentation Scripting API Reference Guide.pdf`
-- `VarianApiBook.pdf` - Comprehensive programming guide
+ClinicE (Eclipse 18.0):
+- `Documentation/ClinicE/VMS.TPS.Common.Model.API.xml` - Eclipse 18 API reference
+- `Documentation/ClinicE/VMS.TPS.Common.Model.Types.xml` - Eclipse 18 type definitions
+
+ClinicH (Eclipse 16.1):
+- `Documentation/ClinicH/VMS.TPS.Common.Model.API.xml` - Eclipse 16 API reference
+- `Documentation/ClinicH/VMS.TPS.Common.Model.Types.xml` - Eclipse 16 type definitions
+
+**PDF Reference Guides (Shared):**
+- `Documentation/Eclipse Scripting API Reference Guide 18.0.pdf` - Official ESAPI manual
+- `Documentation/Image Registration and Segmentation Scripting API Reference Guide.pdf`
+- `Documentation/VarianApiBook.pdf` - Comprehensive programming guide
 
 **When to use:**
 - Planning features - verify method availability and signatures
 - Implementing code - check parameters, return types, null safety
 - Explaining code - reference official documentation
 - Troubleshooting - understand expected behavior
+- **IMPORTANT:** Use correct variant documentation (ClinicE vs ClinicH)
 
 **Example usage:**
 ```bash
-# Find Structure class documentation
-grep -A 20 "T:VMS.TPS.Common.Model.API.Structure" Documentation/VMS.TPS.Common.Model.API.xml
+# ClinicE (Eclipse 18) - Find Structure class documentation
+grep -A 20 "T:VMS.TPS.Common.Model.API.Structure" Documentation/ClinicE/VMS.TPS.Common.Model.API.xml
 
-# Find specific method
-grep -A 10 "M:VMS.TPS.Common.Model.API.Structure.OverlapsWith" Documentation/VMS.TPS.Common.Model.API.xml
+# ClinicH (Eclipse 16) - Find specific method
+grep -A 10 "M:VMS.TPS.Common.Model.API.Structure.OverlapsWith" Documentation/ClinicH/VMS.TPS.Common.Model.API.xml
 ```
 
 See `.claude/ARCHITECTURE.md` for detailed usage guide.

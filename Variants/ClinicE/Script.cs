@@ -26,13 +26,16 @@ namespace VMS.TPS
                 return;
             }
 
+            // Create clinic-specific configuration
+            var config = new ROcheck.ClinicEConfig();
+
             var mainControl = new ROcheck.MainControl
             {
-                DataContext = new ROcheck.ValidationViewModel(context)
+                DataContext = new ROcheck.ValidationViewModel(context, config)
             };
 
             window.Content = mainControl;
-            window.Title = "ROcheck v1.6.3";
+            window.Title = "ROcheck v1.6.4";
             window.Width = 650;
             window.Height = 1000;
         }

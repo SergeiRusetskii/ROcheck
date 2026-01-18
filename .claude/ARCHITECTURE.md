@@ -6,8 +6,12 @@
 
 ROcheck is a focused quality assurance tool for Varian Eclipse treatment planning system that performs automated validation checks on structure setup and clinical goal configuration for radiation therapy treatment plans.
 
+**Architecture:** Multi-variant monorepo
+- **Primary Variant:** ClinicE (Eclipse 18.0) - Configuration-driven
+- **Secondary Variant:** ClinicH (Eclipse 16.1) - Manual port only
+
 **Tech Stack:**
-- VMS.TPS.Common.Model.API (Eclipse Scripting API v18.0+)
+- VMS.TPS.Common.Model.API (Eclipse Scripting API v18.0 / v16.1)
 - VMS.TPS.Common.Model.Types
 - .NET Framework 4.8
 - WPF for user interface
@@ -16,36 +20,202 @@ ROcheck is a focused quality assurance tool for Varian Eclipse treatment plannin
 ## Directory Structure
 
 ```
-ROcheck/
-├── Validators/                                      # Validation logic (organized by concern)
-│   ├── ValidatorBase.cs                            # Base validator classes (Composite pattern)
-│   ├── ClinicalGoalsCoverageValidator.cs           # Clinical goal presence validation
-│   ├── TargetContainmentValidator.cs               # GTV/CTV containment within PTV
-│   ├── TargetOAROverlapValidator.cs                # Target-OAR dose conflict detection
-│   ├── PTVBodyProximityValidator.cs                # PTV to Body surface proximity
-│   ├── TargetResolutionValidator.cs                # Small volume high-res validation
-│   ├── StructureTypesValidator.cs                  # DICOM type validation
-│   └── SIBDoseUnitsValidator.cs                    # SIB dose unit validation
-├── Script.cs                                        # ESAPI plugin entry point
-├── ValidationResult.cs                              # Validation result classes and enums
-├── RootValidator.cs                                 # Root validator (orchestrates all validators)
-├── ValidationHelpers.cs                             # Helper methods and spatial algorithms
-├── ValidationViewModel.cs                           # MVVM view model
-├── MainControl.xaml                                 # WPF UI markup
-├── MainControl.xaml.cs                             # WPF UI code-behind
-├── SeverityToColorConverter.cs                     # UI color converter
-├── Properties/
-│   └── AssemblyInfo.cs                             # Version: v1.6.0
-├── Examples/                                        # Example validators and patterns
-├── Documentation/                                   # ESAPI XML and PDF documentation
-├── ROcheck.csproj                                  # Project file (x64, .NET 4.8)
+ROcheck/  (Multi-variant monorepo)
+├── Core/                                           # Shared infrastructure
+│   ├── Base/
+│   │   ├── ValidatorBase.cs                       # Base validator classes (Composite pattern)
+│   │   └── IValidationConfig.cs                   # Configuration interface
+│   ├── Models/
+│   │   └── ValidationResult.cs                    # Validation result classes and enums
+│   ├── UI/
+│   │   ├── MainControl.xaml                       # WPF UI markup
+│   │   ├── MainControl.xaml.cs                    # WPF UI code-behind
+│   │   └── SeverityToColorConverter.cs            # UI color converter
+│   └── Helpers/
+│       └── ValidationHelpers.cs                   # Helper methods and spatial algorithms
+│
+├── Variants/
+│   ├── ClinicE/                                   # Primary variant (Eclipse 18.0)
+│   │   ├── Config/
+│   │   │   └── ClinicEConfig.cs                  # Clinic E configuration
+│   │   ├── Validators/                           # 7 specialized validators
+│   │   │   ├── ClinicalGoalsCoverageValidator.cs # Clinical goal presence
+│   │   │   ├── TargetContainmentValidator.cs     # GTV/CTV containment
+│   │   │   ├── TargetOAROverlapValidator.cs      # Target-OAR conflicts
+│   │   │   ├── PTVBodyProximityValidator.cs      # PTV proximity to Body
+│   │   │   ├── TargetResolutionValidator.cs      # Small volume high-res
+│   │   │   ├── StructureTypesValidator.cs        # DICOM type validation
+│   │   │   └── SIBDoseUnitsValidator.cs          # SIB dose unit validation
+│   │   ├── Script.cs                             # ESAPI entry point
+│   │   ├── RootValidator.cs                      # Validator orchestrator
+│   │   ├── ValidationViewModel.cs                # MVVM view model
+│   │   ├── ROcheck.esapi.csproj                 # Eclipse 18 project (x64, .NET 4.8)
+│   │   ├── Properties/AssemblyInfo.cs            # Version: v1.6.3
+│   │   └── README.md
+│   │
+│   └── ClinicH/                                   # Secondary variant (Eclipse 16.1)
+│       ├── Config/                               # (Config folder - pending refactor)
+│       ├── Validators/                           # Same 7 validators (manual port)
+│       ├── Script.cs
+│       ├── RootValidator.cs
+│       ├── ValidationViewModel.cs
+│       ├── ROcheck.esapi.csproj                 # Eclipse 16 project
+│       └── Properties/AssemblyInfo.cs            # Version: v1.6.3
+│
+├── Documentation/
+│   ├── ClinicE/                                   # Eclipse 18 API documentation
+│   │   ├── VMS.TPS.Common.Model.API.xml          # v18.0 API reference
+│   │   └── VMS.TPS.Common.Model.Types.xml        # v18.0 type definitions
+│   ├── ClinicH/                                   # Eclipse 16 API documentation
+│   │   ├── VMS.TPS.Common.Model.API.xml          # v16.1 API reference
+│   │   └── VMS.TPS.Common.Model.Types.xml        # v16.1 type definitions
+│   ├── Eclipse Scripting API Reference Guide 18.0.pdf
+│   ├── Image Registration and Segmentation Scripting API Reference Guide.pdf
+│   └── VarianApiBook.pdf
+│
 ├── ROcheck.sln                                     # Solution file
 └── .claude/                                        # Framework files
+    ├── SNAPSHOT.md                                # Tracks ClinicE (primary)
+    ├── ARCHITECTURE.md                            # This file
+    ├── BACKLOG.md
+    ├── ROADMAP.md
+    └── variants/
+        ├── clinicE.md                            # ClinicE deployment tracking
+        └── clinicH.md                            # ClinicH porting log
 ```
+
+## Multi-Variant Architecture
+
+### Design Principles
+
+**ClinicE-Primary Workflow:**
+- All new development happens in ClinicE first
+- ClinicE uses configuration-driven validation (IValidationConfig)
+- ClinicH updated only when explicitly requested
+- Core/ infrastructure benefits both variants automatically
+
+**Configuration System:**
+- `IValidationConfig` interface defines clinic-specific parameters
+- Each variant implements its own config (ClinicEConfig, future ClinicHConfig)
+- Validators accept config via constructor injection
+- Enables different thresholds, exclusions, and naming conventions per clinic
+
+**Shared Infrastructure (Core/):**
+- ValidatorBase and CompositeValidator (base classes)
+- ValidationResult and ValidationSeverity (data models)
+- MainControl and UI components
+- ValidationHelpers (spatial algorithms, ESAPI utilities)
+
+**Variant-Specific Code:**
+- Validators (even though logic is similar, kept in variants for independence)
+- Config implementations
+- Entry points (Script.cs, RootValidator, ValidationViewModel)
+- .csproj files (target different Eclipse versions)
+
+### Development Workflow
+
+**Normal Development (ClinicE Primary):**
+1. Develop new features in `Variants/ClinicE/`
+2. Update `.claude/SNAPSHOT.md` with ClinicE version
+3. Update `.claude/variants/clinicE.md` with changes
+4. Commit and push
+5. ClinicH is NOT automatically updated
+
+**Manual Porting (ClinicE → ClinicH):**
+1. User explicitly requests port
+2. Review changes in ClinicE between versions
+3. Copy/adapt changes to ClinicH
+4. Adjust for ClinicH config differences (if needed)
+5. Update `.claude/variants/clinicH.md` porting log
+6. Note source ClinicE version
+7. Test ClinicH independently
+8. Commit with clear message: `port: feature X to ClinicH (from ClinicE vX.X.X)`
+
+**Core/ Infrastructure Changes:**
+1. Both variants reference Core/ files
+2. Build both variants to verify compatibility
+3. If ClinicH breaks, fix is required (can't ignore Core changes)
+4. Update both variant tracking files
+
+### Configuration Injection Pattern
+
+**ClinicE Example:**
+```csharp
+// Variants/ClinicE/Config/ClinicEConfig.cs
+public class ClinicEConfig : IValidationConfig
+{
+    public double PTVBodyProximityThresholdMm => 4.0;
+    public string BodyStructureId => "BODY";
+    // ... other config properties
+}
+
+// Variants/ClinicE/Validators/PTVBodyProximityValidator.cs
+public class PTVBodyProximityValidator : ValidatorBase
+{
+    private readonly IValidationConfig _config;
+
+    public PTVBodyProximityValidator(IValidationConfig config)
+    {
+        _config = config;
+    }
+
+    // Use _config.PTVBodyProximityThresholdMm instead of hardcoded 4.0
+}
+
+// Variants/ClinicE/Script.cs
+var config = new ClinicEConfig();
+var viewModel = new ValidationViewModel(context, config);
+```
+
+### Variant Tracking System
+
+**Purpose:** Track deployment status, configuration, and porting history per variant
+
+**Files:**
+- `.claude/variants/clinicE.md` - ClinicE deployment and testing notes
+- `.claude/variants/clinicH.md` - ClinicH porting log and status
+
+**Benefits:**
+- Clear audit trail of what's been ported
+- Version synchronization tracking
+- Deployment status per clinic
+- Testing history
 
 ## Key Components
 
-### Script.cs
+### Core/Base/IValidationConfig.cs
+**Purpose:** Configuration interface for clinic-specific parameters
+- Defines thresholds (PTV proximity, high-res volumes, SIB dose %)
+- Defines structure exclusions (names and patterns)
+- Defines naming conventions (body structure ID, target prefixes)
+- Implemented by ClinicEConfig (ClinicHConfig future)
+
+### Core/Base/ValidatorBase.cs
+**Purpose:** Base classes for validation system
+- `ValidatorBase`: Abstract base class for all validators
+- `CompositeValidator`: Base for validators that contain child validators (Composite pattern)
+- Shared by both variants
+
+### Core/Models/ValidationResult.cs
+**Purpose:** Core validation data structures
+- `ValidationSeverity`: Enum (Error, Warning, Info)
+- `ValidationResult`: Class with Category, Message, Severity, IsFieldResult properties
+- Shared by both variants
+
+### Core/UI/MainControl.xaml
+**Purpose:** WPF user interface (shared)
+- DataGrid with validation results
+- Severity-based color coding
+- Shared by both variants
+
+### Core/Helpers/ValidationHelpers.cs
+**Purpose:** Helper methods and spatial algorithms (shared)
+- ESAPI utility methods (GetClinicalGoals, GetReviewedPrescriptionTargetIds)
+- Spatial algorithms (IsStructureContained, StructuresOverlap)
+- Structure filtering logic
+- Shared by both variants
+
+### Variants/ClinicE/Script.cs (and ClinicH/Script.cs)
 **Location:** `/Script.cs`
 **Purpose:** Entry point for the ESAPI plugin
 - Creates main UI window (650x1000 pixels)

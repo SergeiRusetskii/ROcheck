@@ -1,7 +1,9 @@
 # CLAUDE.md — AI Agent Instructions
 
-**Framework:** Claude Code Starter v2.1
+**Framework:** Claude Code Starter v2.5.1
 **Type:** Meta-framework extending Claude Code capabilities
+
+---
 
 ## Project-Specific Rules
 
@@ -12,21 +14,19 @@
 
 **TEST_ Prefix Procedure:**
 
-When user requests to add or remove TEST_ prefix, update ALL THREE locations:
+When user requests to add or remove TEST_ prefix, update ALL THREE locations per variant:
 
-1. **ROcheck.csproj** (line 11):
-   - Testing: `<AssemblyName>TEST_ROcheck.esapi</AssemblyName>`
-   - Production: `<AssemblyName>ROcheck.esapi</AssemblyName>`
+**ClinicE:**
+1. `Variants/ClinicE/ROcheck.esapi.csproj` (line 11)
+2. `Variants/ClinicE/Properties/AssemblyInfo.cs` (line 12)
+3. `Variants/ClinicE/Script.cs` (line ~35)
 
-2. **Properties/AssemblyInfo.cs** (line 12):
-   - Testing: `[assembly: AssemblyProduct("TEST_ROcheck.esapi")]`
-   - Production: `[assembly: AssemblyProduct("ROcheck.esapi")]`
+**ClinicH:**
+1. `Variants/ClinicH/ROcheck.esapi.csproj` (line 11)
+2. `Variants/ClinicH/Properties/AssemblyInfo.cs` (line 12)
+3. `Variants/ClinicH/Script.cs` (line ~35)
 
-3. **Script.cs** (line ~35):
-   - Testing: `window.Title = "TEST_ROcheck v1.X.X";`
-   - Production: `window.Title = "ROcheck v1.X.X";`
-
-**CRITICAL:** All three files must be updated together. Missing the .csproj file means the build will use the wrong assembly name.
+**CRITICAL:** All three files must be updated together per variant. Missing the .csproj file means the build will use the wrong assembly name.
 
 **Version Increment Policy:**
 
@@ -34,20 +34,20 @@ When user requests to add or remove TEST_ prefix, update ALL THREE locations:
 
 When user provides feedback from real Eclipse script testing (NOT build errors), increment the PATCH version in ALL THREE locations:
 
-1. **ROcheck.csproj** (line 11): `<AssemblyName>TEST_ROcheck.esapi</AssemblyName>` - no version here
-2. **Properties/AssemblyInfo.cs** (lines 36-37):
+1. **Properties/AssemblyInfo.cs** (lines 36-37):
    ```
-   [assembly: AssemblyVersion("1.5.X.0")]
-   [assembly: AssemblyFileVersion("1.5.X.0")]
+   [assembly: AssemblyVersion("1.6.X.0")]
+   [assembly: AssemblyFileVersion("1.6.X.0")]
    ```
-3. **Script.cs** (line ~35): `window.Title = "TEST_ROcheck v1.5.X";`
+2. **Script.cs** (line ~35): `window.Title = "ROcheck v1.6.X";`
+3. Update `.claude/SNAPSHOT.md` with new version
 
 **Version increment rules:**
-- Patch version (1.5.1 → 1.5.2): After each real Eclipse testing feedback
-- Minor version (1.5.X → 1.6.0): New features or significant changes
+- Patch version (1.6.4 → 1.6.5): After each real Eclipse testing feedback
+- Minor version (1.6.X → 1.7.0): New features or significant changes
 - Major version (1.X.X → 2.0.0): Major refactoring or breaking changes
 
-**Example:** User tests v1.5.1 in Eclipse and reports an issue → Update to v1.5.2 before making fixes.
+---
 
 ## Triggers
 
@@ -71,9 +71,9 @@ cat .claude/migration-context.json 2>/dev/null
 If file exists, this is first launch after installation.
 
 **Read context and route:**
-- If `"mode": "legacy"` → Execute Legacy Migration workflow (see below)
-- If `"mode": "upgrade"` → Execute Framework Upgrade workflow (see below)
-- If `"mode": "new"` → Execute New Project Setup workflow (see below)
+- If `"mode": "legacy"` → Execute Legacy Migration workflow
+- If `"mode": "upgrade"` → Execute Framework Upgrade workflow
+- If `"mode": "new"` → Execute New Project Setup workflow
 
 After completing workflow, delete marker:
 ```bash
@@ -81,8 +81,6 @@ rm .claude/migration-context.json
 ```
 
 If no migration context, continue to Step 0.1 (Crash Recovery).
-
----
 
 ### Step 0.1: Crash Recovery
 ```bash
@@ -110,7 +108,7 @@ Read `.claude/SNAPSHOT.md` — current version, what's in progress
 ### Step 4: Confirm
 ```
 Context loaded. Directory: [pwd]
-Framework: Claude Code Starter v2.1
+Framework: Claude Code Starter v2.5.1
 Ready to work!
 ```
 
@@ -119,23 +117,21 @@ Ready to work!
 ## Completion Protocol
 
 ### 1. Build (if code changed)
-```bash
-npm run build
-```
+- User builds manually (see Build Policy above)
+- Note what needs building
 
 ### 2. Update Metafiles
 - `.claude/BACKLOG.md` — mark completed tasks `[x]`
 - `.claude/SNAPSHOT.md` — update version and status
 - `CHANGELOG.md` — add entry (if release)
 - `.claude/ARCHITECTURE.md` — update if code structure changed
+- `.claude/variants/clinicE.md` or `clinicH.md` — if variant-specific changes
 
 ### 3. Git Commit
 ```bash
 git add -A && git status
 git commit -m "$(cat <<'EOF'
 type: Brief description
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
@@ -159,52 +155,6 @@ git log origin/main..HEAD --oneline
 ```bash
 echo '{"status": "clean", "timestamp": "'$(date -Iseconds)'"}' > .claude/.last_session
 ```
-
----
-
-## Slash Commands
-
-**Core:** `/fi`, `/commit`, `/pr`
-**Dev:** `/fix`, `/feature`, `/review`, `/test`, `/security`
-**Quality:** `/explain`, `/refactor`, `/optimize`
-**Database:** `/db-migrate`
-**Installation:** `/migrate-legacy`, `/upgrade-framework`
-
-## Key Principles
-
-1. **Framework as AI Extension** — not just docs, but functionality
-2. **Privacy by Default** — dialogs private in .gitignore
-3. **Local Processing** — no external APIs
-4. **Token Economy** — minimal context loading
-
-## Framework Tools Usage Policy
-
-**MANDATORY: Use Task tool with Explore agent for:**
-- Exploring codebase structure and architecture
-- Understanding how systems work (e.g., "how are validators registered?")
-- Finding related files and patterns
-- Answering questions requiring multiple file searches
-- Any non-trivial search operations
-
-**DO NOT:**
-- Run Glob/Grep/Read directly for exploratory tasks
-- Search manually when exploring unfamiliar code
-- Skip the framework for "quick searches" — they're rarely quick
-
-**Example:**
-```
-❌ BAD: User asks "how are validators registered?"
-→ Agent runs Glob *.cs, Grep "validator", Read multiple files
-
-✅ GOOD: User asks "how are validators registered?"
-→ Agent uses Task tool with Explore agent
-```
-
-## Warnings
-
-- DO NOT skip Crash Recovery check
-- DO NOT commit without updating metafiles
-- ALWAYS mark session clean at completion
 
 ---
 
@@ -257,9 +207,7 @@ Only happens when explicitly requested by user.
    ```bash
    # Copy changed files from ClinicE to ClinicH
    cp Variants/ClinicE/Validators/SomeValidator.cs Variants/ClinicH/Validators/
-
    # Adjust for ClinicH config differences (if needed)
-   # (e.g., different thresholds, structure names)
    ```
 
 3. Update metafiles:
@@ -267,33 +215,17 @@ Only happens when explicitly requested by user.
    - Note source ClinicE version
    - Update ClinicH version number if needed
 
-4. Test ClinicH independently
-
-5. Commit with clear message:
+4. Commit with clear message:
    ```bash
-   git commit -m "port: HasSegment checks to ClinicH (from ClinicE v1.6.3)"
+   git commit -m "port: Feature X to ClinicH (from ClinicE vX.X.X)"
    ```
-
-**When Bug Found in ClinicH:**
-
-If bug discovered during ClinicH testing that likely affects ClinicE:
-
-1. Fix in ClinicE first (since it's primary)
-2. Test in ClinicE
-3. Port fix back to ClinicH
-4. Update both variant tracking files
 
 **Core/ Infrastructure Changes:**
 
 When Core/ infrastructure changes:
-
 1. Both variants affected (since both reference Core/)
-2. Build both variants to verify:
-   ```bash
-   # User builds manually - DO NOT execute msbuild
-   # Just note what needs building
-   ```
-3. If ClinicH breaks, fix is required (can't ignore Core changes)
+2. Note what needs building (user builds manually)
+3. If ClinicH breaks, fix is required
 4. Update both variant tracking files
 
 ### Variant Tracking Files
@@ -308,53 +240,7 @@ When Core/ infrastructure changes:
 - ClinicH porting log
 - Pending ports
 - Testing status
-- Configuration notes (when refactored)
-
-### Configuration System
-
-**ClinicE (Configuration-Driven):**
-- `Core/Base/IValidationConfig.cs` - Interface
-- `Variants/ClinicE/Config/ClinicEConfig.cs` - Implementation
-- Validators accept config via constructor injection
-- Easy to change thresholds and exclusions
-
-**ClinicH (Hardcoded - Pending Config):**
-- Still uses hardcoded values
-- Config refactor will be ported when explicitly requested
-- Different thresholds expected (more conservative)
-
-### File Paths
-
-**ClinicE Files:**
-- Project: `Variants/ClinicE/ROcheck.esapi.csproj`
-- Entry: `Variants/ClinicE/Script.cs`
-- Config: `Variants/ClinicE/Config/ClinicEConfig.cs`
-- Validators: `Variants/ClinicE/Validators/*.cs`
-
-**ClinicH Files:**
-- Project: `Variants/ClinicH/ROcheck.esapi.csproj`
-- Entry: `Variants/ClinicH/Script.cs`
-- Validators: `Variants/ClinicH/Validators/*.cs`
-
-**Core Files (Shared):**
-- Base: `Core/Base/ValidatorBase.cs`, `Core/Base/IValidationConfig.cs`
-- Models: `Core/Models/ValidationResult.cs`
-- UI: `Core/UI/MainControl.xaml`, `Core/UI/SeverityToColorConverter.cs`
-- Helpers: `Core/Helpers/ValidationHelpers.cs`
-
-### TEST_ Prefix Procedure (Multi-Variant)
-
-**ClinicE:**
-1. `Variants/ClinicE/ROcheck.esapi.csproj` (line 11)
-2. `Variants/ClinicE/Properties/AssemblyInfo.cs` (line 12)
-3. `Variants/ClinicE/Script.cs` (line ~35)
-
-**ClinicH:**
-1. `Variants/ClinicH/ROcheck.esapi.csproj` (line 11)
-2. `Variants/ClinicH/Properties/AssemblyInfo.cs` (line 12)
-3. `Variants/ClinicH/Script.cs` (line ~35)
-
-Update all three files in the respective variant.
+- Configuration notes
 
 ---
 
@@ -362,9 +248,7 @@ Update all three files in the respective variant.
 
 **Location:** `Documentation/` (organized by variant)
 
-This project includes complete ESAPI API reference documentation for both Eclipse versions:
-
-**XML IntelliSense Files (use with Read tool or Grep):**
+**XML IntelliSense Files:**
 
 ClinicE (Eclipse 18.0):
 - `Documentation/ClinicE/VMS.TPS.Common.Model.API.xml` - Eclipse 18 API reference
@@ -376,7 +260,6 @@ ClinicH (Eclipse 16.1):
 
 **PDF Reference Guides (Shared):**
 - `Documentation/Eclipse Scripting API Reference Guide 18.0.pdf` - Official ESAPI manual
-- `Documentation/Image Registration and Segmentation Scripting API Reference Guide.pdf`
 - `Documentation/VarianApiBook.pdf` - Comprehensive programming guide
 
 **When to use:**
@@ -386,118 +269,65 @@ ClinicH (Eclipse 16.1):
 - Troubleshooting - understand expected behavior
 - **IMPORTANT:** Use correct variant documentation (ClinicE vs ClinicH)
 
-**Example usage:**
-```bash
-# ClinicE (Eclipse 18) - Find Structure class documentation
-grep -A 20 "T:VMS.TPS.Common.Model.API.Structure" Documentation/ClinicE/VMS.TPS.Common.Model.API.xml
-
-# ClinicH (Eclipse 16) - Find specific method
-grep -A 10 "M:VMS.TPS.Common.Model.API.Structure.OverlapsWith" Documentation/ClinicH/VMS.TPS.Common.Model.API.xml
-```
-
 See `.claude/ARCHITECTURE.md` for detailed usage guide.
 
 ---
 
-## Legacy Migration Protocol
+## Repository Structure
 
-**Triggered when:** `.claude/migration-context.json` exists with `"mode": "legacy"`
+```
+ROcheck/  (Multi-variant monorepo)
+├── Core/                           # Shared infrastructure
+│   ├── Base/                       # ValidatorBase, IValidationConfig
+│   ├── Models/                     # ValidationResult
+│   ├── UI/                         # MainControl, SeverityToColorConverter
+│   └── Helpers/                    # ValidationHelpers
+│
+├── Variants/
+│   ├── ClinicE/                    # Primary variant (Eclipse 18.0)
+│   │   ├── Config/                 # ClinicEConfig.cs
+│   │   ├── Validators/             # 7 validators
+│   │   ├── Script.cs               # ESAPI entry point
+│   │   └── ROcheck.esapi.csproj
+│   │
+│   └── ClinicH/                    # Secondary variant (Eclipse 16.1)
+│       ├── Validators/             # Manual port validators
+│       ├── Script.cs
+│       └── ROcheck.esapi.csproj
+│
+├── Documentation/
+│   ├── ClinicE/                    # Eclipse 18 API docs
+│   └── ClinicH/                    # Eclipse 16 API docs
+│
+└── .claude/
+    ├── SNAPSHOT.md                 # Current state
+    ├── BACKLOG.md                  # Sprint tasks
+    ├── ARCHITECTURE.md             # Code structure
+    └── variants/                   # Variant tracking
+        ├── clinicE.md
+        └── clinicH.md
+```
 
-**Purpose:** Analyze existing project and generate Framework files.
+## Slash Commands
 
-**Workflow:**
+**Core:** `/fi`, `/commit`, `/pr`
+**Dev:** `/fix`, `/feature`, `/review`, `/test`, `/security`
+**Quality:** `/explain`, `/refactor`, `/optimize`
 
-1. **Read migration context:**
-   ```bash
-   cat .claude/migration-context.json
-   ```
+## Key Principles
 
-2. **Execute `/migrate-legacy` command:**
-   - Follow instructions in `.claude/commands/migrate-legacy.md`
-   - Discovery → Deep Analysis → Questions → Report → Generate Files
+1. **Framework as AI Extension** — not just docs, but functionality
+2. **Privacy by Default** — dialogs private in .gitignore
+3. **Local Processing** — no external APIs
+4. **Token Economy** — minimal context loading
 
-3. **After completion:**
-   - Verify all Framework files created
-   - Delete migration marker:
-     ```bash
-     rm .claude/migration-context.json
-     ```
-   - Show success summary
+## Warnings
 
-4. **Next session:**
-   - Use normal Cold Start Protocol
-
----
-
-## Framework Upgrade Protocol
-
-**Triggered when:** `.claude/migration-context.json` exists with `"mode": "upgrade"`
-
-**Purpose:** Migrate from old Framework version to v2.1.
-
-**Workflow:**
-
-1. **Read migration context:**
-   ```bash
-   cat .claude/migration-context.json
-   ```
-   Extract `old_version` field.
-
-2. **Execute `/upgrade-framework` command:**
-   - Follow instructions in `.claude/commands/upgrade-framework.md`
-   - Detect Version → Migration Plan → Backup → Execute → Verify
-
-3. **After completion:**
-   - Verify migration successful
-   - Delete migration marker:
-     ```bash
-     rm .claude/migration-context.json
-     ```
-   - Show success summary
-
-4. **Next session:**
-   - Use normal Cold Start Protocol with new structure
+- DO NOT skip Crash Recovery check
+- DO NOT execute msbuild or build commands
+- DO NOT commit without updating metafiles
+- ALWAYS mark session clean at completion
+- ALWAYS use correct variant documentation
 
 ---
-
-## New Project Setup Protocol
-
-**Triggered when:** `.claude/migration-context.json` exists with `"mode": "new"`
-
-**Purpose:** Verify Framework installation and welcome user.
-
-**Workflow:**
-
-1. **Show welcome message:**
-   ```
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ✅ Installation complete!
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-   📁 Framework Files Created:
-
-     ✅ .claude/SNAPSHOT.md
-     ✅ .claude/BACKLOG.md
-     ✅ .claude/ROADMAP.md
-     ✅ .claude/ARCHITECTURE.md
-     ✅ .claude/IDEAS.md
-
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-   🚀 Next Step:
-
-     Type "start" to launch the framework.
-
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ```
-
-2. **Delete migration marker:**
-   ```bash
-   rm .claude/migration-context.json
-   ```
-
-3. **Next session:**
-   - Use normal Cold Start Protocol
-
----
-*Framework: Claude Code Starter v2.1*
+*Framework: Claude Code Starter v2.5.1 | Updated: 2026-01-18*
